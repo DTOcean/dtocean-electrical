@@ -1,4 +1,4 @@
-﻿# DTOcean Electrical Sub-Systems Module
+# DTOcean Electrical Sub-Systems Module
 
 ## Installation
 
@@ -50,22 +50,14 @@ C:\Anaconda\Scripts\activate.bat dtocean_elec
 conda install descartes matplotlib networkx numpy openpyxl pandas pypower scipy shapely-win-py27 xlrd xlwt
 ```
 
-### Install "beta" Module Package
+The package "polite" can be downloaded from [SETIS](https://setis.ec.europa.eu/dt-ocean/).
 
-Three packages must be installed from the "beta"
-branches of the Hg repositories found in
-https://bitbucket.org/team_dtocean/dtocean-electrical.
+```
+cd path\to\polite
+winmake.bat install
+```
 
-The repositories are managed using [Mercurial](https://www.mercurial-scm.org/)
-and if you wish to download the entire repository then the recommended software
-is [TortoiseHg](http://tortoisehg.bitbucket.org/).
-
-A direct link to the current beta version is also available, here:
-
-https://bitbucket.org/team_dtocean/dtocean-electrical/get/beta.zip
-
-Once cloned or extracted to a particular directory the module is installed
-using the following commands:
+### Install Module Package
 
 ```
 cd path\to\dtocean-electrical
