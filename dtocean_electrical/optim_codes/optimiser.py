@@ -524,7 +524,7 @@ class Optimiser(object):
         point = Point(self.meta_data.array_data.landing_point[0],
                       self.meta_data.array_data.landing_point[1])
 
-        area_exterior = LinearRing(area.exterior.coords)
+        area_exterior = LineString(area.exterior.coords)
         d = area_exterior.project(point)
         p = area_exterior.interpolate(d)
         closest_point_coords = list(p.coords)[0]
