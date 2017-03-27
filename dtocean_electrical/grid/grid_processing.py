@@ -47,15 +47,14 @@ def grid_processing(site_data, export_data, options, n_neighbours=8):
 
     merged_grid = merge_bathymetry(site_data, export_data)
 
-    grid = \
+    grid, constrained_lines = \
         make_graph_object(merged_grid, n_neighbours, exclusion_zones, options)
 
     grid.lease_boundary = lease_area_boundary(site_data)
 
     module_logger.info("Grid prepared...")
 
-    return grid
-
+    return grid, exclusion_zones, constrained_lines
 
 def lease_area_boundary(site_data):
 
@@ -192,7 +191,7 @@ def make_graph_object(area_pd, n_neighbours, exclusions, options):
 
     remove_exclusion_zones(exclusions, grid)
 
-    apply_gradient_constraint(options.equipment_gradient_constraint,
+    constrained_lines = apply_gradient_constraint(options.equipment_gradient_constraint,
                               grid,
                               grads)
 
@@ -201,7 +200,7 @@ def make_graph_object(area_pd, n_neighbours, exclusions, options):
 
     module_logger.info("Constraints checked...")
 
-    return grid
+    return grid, constrained_lines
 
 
 def merge_bathymetry_xy_intersection_test(area_one, area_two):
@@ -497,9 +496,9 @@ def apply_gradient_constraint(maximum_gradient, grid, grads):
 
     module_logger.info("Checking gradient constraints...")
 
-    grid.gradient_constraint(maximum_gradient, grads)
+    constrained_lines = grid.gradient_constraint(maximum_gradient, grads)
 
-    return
+    return constrained_lines
 
 
 def apply_equipment_constraints(options,

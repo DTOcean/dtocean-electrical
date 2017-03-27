@@ -7,8 +7,11 @@ Email: a.collin@ed.ac.uk
 
 """
 
+import logging
+module_logger = logging.getLogger(__name__)
+
 import pandas as pd
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 from copy import deepcopy
 
 
@@ -228,10 +231,17 @@ class Grid(object):
             [(key, sub_key) for key, val in all_grads.iteritems()
                  for sub_key, sub_val in val.iteritems()
                      if sub_val['weight'] > gradient_limit]
+            
+        n_edges = len(constrained_edges)
+        
+        logMsg = "Removing {} constrained edges".format(n_edges)
+        module_logger.info(logMsg)
 
         self._remove_edges(constrained_edges)
+        
+        constrained_lines = self._make_lines(constrained_edges)
 
-        return
+        return constrained_lines
 
     def _remove_edges(self, constrained_edges):
 
@@ -245,7 +255,7 @@ class Grid(object):
             none.
 
         '''
-
+        
         self.graph.remove_edges_from(constrained_edges)
 
         return
@@ -443,7 +453,24 @@ class Grid(object):
                 for idx, value in self.grid_pd.iterrows()}
 
         return points_as_dict
-
+    
+    def _make_lines(self, edge_id_list):
+        
+        all_lines = []
+        
+        for edge in edge_id_list:
+                        
+            start_row = self.grid_pd[self.grid_pd.id == edge[0]]
+            end_row = self.grid_pd[self.grid_pd.id == edge[1]]
+            
+            line = LineString([
+                            (start_row.iloc[0]["x"], start_row.iloc[0]["y"]),
+                            (end_row.iloc[0]["x"], end_row.iloc[0]["y"])
+                            ])
+            
+            all_lines.append(line)
+                    
+        return all_lines
 
 class GridPoint(object):
 
