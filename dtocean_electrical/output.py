@@ -102,7 +102,8 @@ def plot_devices(grid,
 
     ax1.margins(0.2)
     plt.axis('equal')
-    plt.show()
+    
+    return fig
     
 def plot_line(ax, ob, zorder=1):
     x, y = ob.xy

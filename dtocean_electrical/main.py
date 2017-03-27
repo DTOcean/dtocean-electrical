@@ -16,14 +16,16 @@ This module defines the main module of the DTOcean electrical subsystems.
 import logging
 module_logger = logging.getLogger(__name__)
 
+import networkx as nx
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon
+
 from output import plot_devices
 from grid.grid import Grid, GridPoint
 from grid.grid_processing import grid_processing
 from optim_codes.optimiser import (RadialNetwork,
                                    StarNetwork,
                                    SelectInstallationTool)
-import networkx as nx
-from shapely.geometry import Polygon
 
 from input_utils.utils import snap_to_grid
 from input_utils.input_tests import check_inputs
@@ -59,7 +61,6 @@ class Electrical(object):
         self.export_data = export_data
         self.options = options
         self.database = database
-        self.exclusion_lines = []
 #        self.status, self.error_string = (0, 0)
         self.status, self.error_string = check_inputs(self)
 
@@ -118,12 +119,12 @@ class Electrical(object):
 
         else:
 
-            self.grid = \
+            self.grid, constrained_polygons, constrained_lines = \
                 grid_processing(self.site_data, self.export_data, self.options)
-
+                
             if plot == True:
                 plot_devices(self.grid,
-                             self.exclusion_lines,
+                             constrained_lines,
                              self.array_data.layout,
                              self.array_data.landing_point,
                              self.array_data.device_footprint,
@@ -132,6 +133,7 @@ class Electrical(object):
                              [],
                              []
                              )
+                plt.show()
 
             self._fix_features_to_grid()
 
@@ -252,7 +254,7 @@ class Electrical(object):
             if plot == True:
 
                 plot_devices(self.grid,
-                             self.exclusion_lines,
+                             constrained_lines,
                              self.array_data.layout,
                              self.array_data.landing_point,
                              self.array_data.device_footprint,
@@ -261,6 +263,7 @@ class Electrical(object):
                              result.array_cables,
                              result.export_cables
                              )
+                plt.show()
 
             module_logger.info("Electrical network design complete...")
 
