@@ -569,7 +569,7 @@ class Optimiser(object):
         max_y = max(device_loc[:, 1])
         diff_y = max_y - min_y
 
-        initial_estimate, _ = kmeans2(device_loc[:, :2], n_cp)
+        initial_estimate, _ = kmeans2(device_loc[:, :2], n_cp, minit='points')
         idx, _ = vq(device_loc[:, :2], initial_estimate)
 
         grid = np.array(self.meta_data.grid.grid_pd[['x', 'y']])
