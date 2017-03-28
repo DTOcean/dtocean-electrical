@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Replaced incorrect Shapely object when calculating design limits.
+- Fixed issue where bathymetry points would be excluded if the local gradient
+  exceeded 0. This now conforms to the user set limit.
+- Fixed issue with the substation location algorithm, when devices where in
+  symmetric layouts.
 
 ## [1.0.0] - 2017-01-05
 
