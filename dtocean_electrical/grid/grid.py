@@ -226,7 +226,8 @@ class Grid(object):
 
         constrained_edges = \
             [(key, sub_key) for key, val in all_grads.iteritems()
-             for sub_key, sub_val in val.iteritems() if sub_val['weight'] > 0]
+                 for sub_key, sub_val in val.iteritems()
+                     if sub_val['weight'] > gradient_limit]
 
         self._remove_edges(constrained_edges)
 
