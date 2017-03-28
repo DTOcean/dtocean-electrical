@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add change log.
 
+### Fixed
+
+- Fixed issue where bathymetry points would be excluded if the local gradient
+  exceeded 0. This now conforms to the user set limit.
+- Fixed issue with the substation location algorithm, when devices where in
+  symmetric layouts.
+
 ## [1.0.1] - 2017-03-09
 
 ### Fixed
