@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Reimplement constraints recording and plotting.
 - Add change log.
 
 ### Fixed
