@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Reimplement constraints recording and plotting.
 - Add change log.
 
+### Changed
+
+- Changed grid processing to improve methodology for joining lease area and
+  cable corridor.
+
 ### Fixed
 
 - Replaced incorrect Shapely object when calculating design limits.
@@ -19,6 +24,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   exceeded 0. This now conforms to the user set limit.
 - Fixed issue with the substation location algorithm, when devices where in
   symmetric layouts.
+- Fixed bug with checking soil types.
+
+### Removed
+
+- Removed incorrect catch for KeyErrors when searching for cable routes.
 
 ## [1.0.0] - 2017-01-05
 
