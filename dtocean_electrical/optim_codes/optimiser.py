@@ -1390,7 +1390,8 @@ class RadialNetwork(Optimiser):
 
         combo_export, combo_array, combo_devices = self.control_simulations()
 
-        burial_targets = self.meta_data.grid.grid_pd['Target burial depth']
+        burial_targets = self.meta_data.grid.grid_pd[['id',
+                                                      'Target burial depth']]
         network_count = 0
         solutions = []
 
@@ -1670,7 +1671,8 @@ class StarNetwork(Optimiser):
 
         device_loc = self.convert_layout_to_list()
 
-        burial_targets = self.meta_data.grid.grid_pd['Target burial depth']
+        burial_targets = self.meta_data.grid.grid_pd[['id',
+                                                      'Target burial depth']]
 
         groups = self.star_groups()
 
