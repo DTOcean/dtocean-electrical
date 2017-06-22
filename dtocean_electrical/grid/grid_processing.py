@@ -374,11 +374,11 @@ def get_metric_edges(index, grid_df, metric):
 
     id_point = id_indexed_grid_df.loc[index]
     id_point_coords = (id_point.x, id_point.y, id_point['layer 1 start'])
-    i_index = id_point.i
-    j_index = id_point.j
+    i_index = int(id_point.i)
+    j_index = int(id_point.j)
     
-    search_ij = [(i_index+i, j_index+j) for i in (-1, 0, 1)
-                                        for j in (-1, 0, 1)
+    search_ij = [(i_index + i, j_index + j) for i in (-1, 0, 1)
+                                            for j in (-1, 0, 1)
                                                         if i != 0 or j != 0]
     
     metrics = []
