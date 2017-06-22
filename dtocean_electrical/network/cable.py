@@ -167,7 +167,8 @@ def get_burial_depths(route, grid, target_depth):
 
     else:
 
-        burial_depth = grid[grid.index.isin(route)].tolist()
+        points = grid[grid.id.isin(route)]
+        burial_depth = points['Target burial depth'].tolist()
 
     return burial_depth
 

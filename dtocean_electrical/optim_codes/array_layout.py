@@ -398,7 +398,7 @@ def get_device_locations(layout, site_grid):
     device_on_grid = []
 
     for key, value in layout.iteritems():
-        for point in site_grid.points:
+        for point in site_grid.points.values():
             if np.isclose(point.x, value[0]) and np.isclose(point.y, value[1]):
                 device_on_grid.append((int(key[6:]),
                                        point.index,
@@ -592,7 +592,8 @@ def make_linestring(path, site_grid):
 
     line_path = []    
     for point in path:
-        line_path.append((site_grid.points[point].x,site_grid.points[point].y))
+        line_path.append((site_grid.points[point].x,
+                          site_grid.points[point].y))
     
     return LineString(line_path)
 
