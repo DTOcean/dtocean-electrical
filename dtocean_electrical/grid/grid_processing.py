@@ -3,17 +3,21 @@
 Functions to process the bathymetry data into a usual graph for cable routing
 algorithms.
 
-author:: Adam Collin <a.collin@ed.ac.uk>
+author:: Adam Collin <a.collin@ed.ac.uk>,
+         Mathew Topper <dataonlygreater@gmail.com>
 
 """
-# Start logging
-from datetime import datetime
-from shapely.geometry import Polygon
-from grid import Grid, GridPoint
-import networkx as nx
-import numpy as np
-from scipy.spatial import distance
 import logging
+
+import numpy as np
+import pandas as pd
+import networkx as nx
+from scipy.spatial import distance
+from shapely.geometry import MultiPoint, Point
+
+from .grid import Grid
+
+# Start logging
 module_logger = logging.getLogger(__name__)
 
 
@@ -45,357 +49,184 @@ def grid_processing(site_data, export_data, options, n_neighbours=8):
 
     exclusion_zones = get_exclusions(site_data, export_data)
 
-    merged_grid = merge_bathymetry(site_data, export_data)
+    clipped_export, lease_polygon = clip_grid(site_data.bathymetry,
+                                              export_data.bathymetry)
+    
+    network_graph = make_graph(site_data.bathymetry, clipped_export)
+    gradient_dict = make_gradient_dict(site_data.bathymetry, clipped_export)
 
-    grid, constrained_lines = \
-        make_graph_object(merged_grid, n_neighbours, exclusion_zones, options)
+    grid = make_grid(site_data.bathymetry,
+                     clipped_export,
+                     network_graph,
+                     lease_polygon)
+    
+    grid.remove_exclusion_zones(exclusion_zones)
+    constrained_lines = grid.gradient_constraint(
+                                        options.equipment_gradient_constraint,
+                                        gradient_dict)
 
-    grid.lease_boundary = lease_area_boundary(site_data)
-
-    module_logger.info("Grid prepared...")
+    apply_equipment_constraints(grid,
+                                options, 
+                                preselected=options.installation_tool)
 
     return grid, exclusion_zones, constrained_lines
 
-def lease_area_boundary(site_data):
 
-    '''Get the lease area boundary.
+def clip_grid(grid_df_static, grid_df_to_clip): 
 
-    Notes:
-        This is to be replaced with site.lease_boundary so update interface.
+    """Remove grid_df_static from grid_df_to_clip, leaving some overlapping
+    points. Return a copy of grid_df_to_clip with points removed."""
+    
+    # Get a convex hull grid_df_static
+    static_coords = [(x, y) for x, y in zip(grid_df_static.x,
+                                            grid_df_static.y)]
+    static_multipoint = MultiPoint(static_coords)
+    static_poly = static_multipoint.convex_hull
+    
+    while True:
+        
+        # Remove all points *inside* grid_df_static from grid_df_to_clip
+        inside = map(lambda x, y: static_poly.contains(Point(x, y)),
+                     grid_df_to_clip.x,
+                     grid_df_to_clip.y)
+        
+        grid_df_clipped = grid_df_to_clip[~np.array(inside)]
+        clipped_coords = [(x, y) for x, y in zip(grid_df_clipped.x,
+                                                 grid_df_clipped.y)]
+        
+        shared_coords = list(set(clipped_coords).intersection(
+                                                        set(static_coords)))
+        
+        # If we have some values then leave the loop
+        if shared_coords: break
+        
+        if static_poly.area <= 0.:
+            
+            errStr = ("No overlapping nodes were found between lease area "
+                      "and cable corridor.")
+            raise RuntimeError(errStr)
+        
+        # Get maximum grid_df_to_clip spacing
+        dx = np.abs(grid_df_to_clip.x[1] - grid_df_to_clip.x[0])
+        dy = np.abs(grid_df_to_clip.y[1] - grid_df_to_clip.y[0])
+        maxd = max(dx, dy)
+        
+        # Reduce the static_grid polygon
+        static_poly = static_poly.buffer(-maxd / 2.)
+        
+    # Offset the ids of the clipped_grid to avoid clash with the grid_df_static
+    offset_index = max(grid_df_static.id) + 1
+    grid_df_clipped.loc[:, 'id'] = grid_df_clipped['id'].apply(
+                                                    lambda x: x + offset_index)
+        
+    return grid_df_clipped, static_poly
 
+
+def make_graph(grid_df_static, grid_df_clipped):
+
+    '''Creates instance NetworkX graph object connecting the two grids.
     '''
 
-    # make shapely point list of lease area
-    lease_area_points_x = site_data.bathymetry.x.tolist()
-    lease_area_points_y = site_data.bathymetry.y.tolist()
+    module_logger.info("Calculating lease area distances...")
+    graph_dict_static = get_neighbours_distance(grid_df_static)
 
-    # This assumes a four sided square/rectangle shape
-
-    lease_min_x = min(lease_area_points_x)
-    lease_max_x = max(lease_area_points_x)
-    lease_min_y = min(lease_area_points_y)
-    lease_max_y = max(lease_area_points_y)
-
-    polygon_edge = [[lease_min_x, lease_min_y],
-                    [lease_min_x, lease_max_y],
-                    [lease_max_x, lease_max_y],
-                    [lease_max_x, lease_min_y]]
-
-    lease_area_polygon = Polygon(polygon_edge)
-
-    return lease_area_polygon
-
-
-def merge_bathymetry(site_data, export_data):
-
-    '''Merge two bathymetry data sets.
-
-    Args:
-        site_data (object) [-]: Instance of the ElectricalSiteData class.
-        export_data (object) [-]: Instance of the ElectricalExportData class.
-
-    Attributes:
-        export_area (set) [m]: Set of x, y coordinate tuples of export area.
-        lease_area (set) [m]: Set of x, y coordinate tuples of lease area.
-        shared_area (list) [m]: List of x, y coordinate tuples present in lease
-            area and export area.
-        shared_x (tuple) [m]: Tuple of x coordinates of points.
-        shared_y (tuple) [m]: Tuple of y coordinates of points.
-        site_index (pd.DataFrame) [-]: i and j indices of site from shared
-            area.
-        export_index (pd.DataFrame) [-]: i and j indices of export from shared
-            area.
-        new_site_data (pd.DataFrame) [-]: Updated data for site area.
-        merged_grid (pd.DataFrame) [-]: Merge of export and site areas.
-
-    Return:
-        merged_grid
-
-    '''
-
-    module_logger.info("Merging bathymetry...")
-
-    export_area = set(zip(export_data.bathymetry.x, export_data.bathymetry.y))
-
-    lease_area = set(zip(site_data.bathymetry.x, site_data.bathymetry.y))
-
-    shared_area = \
-        merge_bathymetry_xy_intersection_test(export_area, lease_area)
-
-    shared_x, shared_y = zip(*[(point[0], point[1]) for point in shared_area])
-
-    merge_bathymetry_z_intersection_test(
-        shared_x, shared_y, export_data.bathymetry, site_data.bathymetry)
-
-    site_index = \
-        get_index_values_of_selection(site_data.bathymetry, shared_x, shared_y)
-
-    export_index = \
-        get_index_values_of_selection(
-            export_data.bathymetry, shared_x, shared_y)
-
-    new_site_data = \
-        offset_index_values(site_data.bathymetry, site_index, export_index)
-
-    # remove common points from lease area
-    new_site_data.drop(
-        new_site_data.index[site_index.index], inplace=True)
-
-    merged_grid = export_data.bathymetry.append(site_data.bathymetry)
-
-    merged_grid['id'] = list(range(len(merged_grid)))
-    merged_grid = merged_grid.reset_index(drop=True)
-
-    return merged_grid
-
-
-def make_graph_object(area_pd, n_neighbours, exclusions, options):
-
-    '''Creates instance of the Grid class and also generates the NetworkX graph
-    object.
-
-    Args:
-        area_pd (pd.DataFrame) [-]: Area to be converted.
-        n_neighbours (int) [-]: Number of neighbour directions to consider.
-        exclusions (list) [-]:  List of Shapely Polygon objects.
-        options (object) [-]: Instance of ConfigurationOptions class.
-
-    Attributes:
-        grid (object) [-]: Instance of Grid object.
-        grid_dict (dict) [-]: Grid represented as dictionary,
-            Key: i, j indices; Values: index, x coord,  y coord, z coord.
-        graph_ready (dict) [m]: Structured dictionary for NetworkX of edge
-            information for all points.
-        grads (dict) [degrees] Structured dictionary of gradients.
-
-    returns:
-        grid
-
-    '''
-
-    grid = Grid(area_pd)
-
-    module_logger.info("Creating bathymetry grid points...")
-
-    grid.add_points_to_grid()
-
-    grid_dict = grid.grid_as_dict()
-
-    graph_ready = get_neighbours_distance(grid_dict)
-
-    grads = get_neighbours_gradient(grid_dict)
-
+    module_logger.info("Calculating cable corridor distances...")
+    graph_dict_clipped = get_neighbours_distance(grid_df_clipped)
+    
+    assert (set(graph_dict_static.keys()) &
+            set(graph_dict_clipped.keys())) == set()
+    
+    # Get dataframe of overlapping points
+    overlap_df = pd.merge(grid_df_static,
+                          grid_df_clipped,
+                          on=["x", "y"])
+    
+    # Create zero length edges in the lease area dict
+    add_overlap_edges(graph_dict_static, overlap_df)
+    
+    assert (set(graph_dict_static.keys()) &
+            set(graph_dict_clipped.keys())) == set()
+    
+    # Merge the two dicts
+    graph_dict_final = dict(graph_dict_static, **graph_dict_clipped)
+    
     module_logger.info("Building network graph...")
-
-    grid.graph = nx.Graph(graph_ready)
-
-    remove_exclusion_zones(exclusions, grid)
-
-    constrained_lines = apply_gradient_constraint(options.equipment_gradient_constraint,
-                              grid,
-                              grads)
-
-    apply_equipment_constraints(options, grid,
-                                preselected=options.installation_tool)
-
-    module_logger.info("Constraints checked...")
-
-    return grid, constrained_lines
-
-
-def merge_bathymetry_xy_intersection_test(area_one, area_two):
-
-    '''Test for intersection in the x - y plane.
-
-    Args:
-        area_one (set) [m]: Set of x, y coordinate tuples of an area.
-        area_two (set) [m]: Set of x, y coordinate tuples of an area.
-
-    Attributes:
-        common (list) [m]: List of x, y coordinate tuples present in area_one
-            and area_two.
-
-    Returns:
-        common
-
-    Notes:
-        Tests have been separated to provide better error feedback to the user.
-
-    '''
-
-    common = list(area_one.intersection(area_two))
-
-    if not common:
-
-        errStr = ("No intersection was found between the lease area "
-                  "and cable corridor")
-
-        raise RuntimeError(errStr)
-
-    return common
-
-
-def merge_bathymetry_z_intersection_test(x_list, y_list, area_one,
-                                         area_two):
-
-    '''Test for intersection in the z direction.
-
-    Args:
-        x_list (tuple) [m]: Tuple of x coordinates of points.
-        y_list (tuple) [m]: Tuple of y coordinates of points.
-        area_one (pd.DataFrame) [-]: First area under consideration.
-        area_two (pd.DataFrame) [-]: Second area under consideration.
-
-    Attributes:
-        area_one_z (pd.Series) [-]: First area z coordinates.
-        area_two_z (pd.Series) [-]: Second area z coordinates.
-        err_z (list) [m]: Difference between area_one_z and area_two_z.
-
-    Notes:
-        Tests have been separated to provide better error feedback to the user.
-
-    '''
-
-    area_one_z = get_z_dimension(area_one, x_list, y_list)
-
-    area_two_z = get_z_dimension(area_two, x_list, y_list)
-
-    err_z = [z_one - z_two for z_one, z_two in zip(area_one_z, area_two_z)]
-
-    if sum(err_z) != 0:
-
-        errStr = ("Error in depth at intersection between the lease "
-                  "area and the cable corridor.")
-
-        raise RuntimeError(errStr)
-
+    graph = nx.Graph(graph_dict_final)
+    
+    return graph
+    
+    
+def add_overlap_edges(graph_dict_static, overlap_df):
+    
+    for _, point in overlap_df.iterrows():
+        graph_dict_static[point.id_x][point.id_y] = {'weight': 0.}
+        
     return
 
 
-def get_z_dimension(area, x_list, y_list):
+def make_gradient_dict(grid_df_static, grid_df_clipped):
 
-    '''Get z coordinate of area at points defined by x_list and y_list. The z
-    coordinate is defined in column 'layer 1 start'.
-
-    Args:
-        area (pd.DataFrame) [-]: Area under consideration.
-        x_list (tuple) [m]: Tuple of x coordinates of points.
-        y_list (tuple) [m]: Tuple of y coordinates of points.
-
-    Attributes:
-        z (pd.Series) [m]: z coordinates.
-
-    Returns:
-        z
-
+    '''Creates NetworkX graph input dictionary for gradients over the two
+    grids.
     '''
 
-    z = (area[(area['x'].isin(x_list)) &
-              (area['y'].isin(y_list))]['layer 1 start'])
+    module_logger.info("Calculating lease area gradients...")
+    graph_dict_static = get_neighbours_gradient(grid_df_static)
 
-    return z
+    module_logger.info("Calculating cable corridor gradients...")
+    graph_dict_clipped = get_neighbours_gradient(grid_df_clipped)
+    
+    assert (set(graph_dict_static.keys()) &
+            set(graph_dict_clipped.keys())) == set()
+    
+    # Merge the two dicts
+    graph_dict_final = dict(graph_dict_static, **graph_dict_clipped)
+    
+    return graph_dict_final
 
 
-def get_index_values_of_selection(area, x_list, y_list):
+def make_grid(grid_df_static,
+              grid_df_clipped,
+              network_graph,
+              lease_polygon):
 
-    '''Get index values of bathymetry pd.DataFrame.
-
-    Args:
-        area (pd.DataFrame) [-]: Area representation which must include column
-            headers x, y, i and j.
-        x_list (tuple) [m]: Tuple of x coordinates of points.
-        y_list (tuple) [m]: Tuple of y coordinates of points.
-
-    Attributes:
-        index_values (pd.DataFrame) [-]: Returned i and j indices in selection
-            area.
-
-    Returns:
-        index_values
-
+    '''Creates instance of the Grid class.
     '''
-
-    index_values = \
-        area[(area['x'].isin(x_list)) & (area['y'].isin(y_list))][['i', 'j']]
-
-    return index_values
-
-
-def offset_index_values(area, area_indices, other_indices):
-
-    '''Offset the i and j index values in an area with respect to index values
-    in a neighbour area.
-
-    Args:
-        area (pd.DataFrame) [-]: Area under consideration.
-        area_indices (pd.DataFrame) [-]: i and j indices from shared area in
-            area.
-        other_indices (pd.DataFrame) [-]: i and j indices from shared area in
-            other area.
-
-    Attributes:
-        area_i (list) [-]: List of i indices from shared area in area.
-        area_j (list) [-]: List of i indices from shared area in area.
-        other_i (list) [-]: List of i indices from shared area in neighbour
-            area.
-        other_j (list) [-]: List of i indices from shared area in neighbour
-            area.
-        diff_i (int) [-]: Difference in i indices; acts as offset.
-        diff_j (int) [-]: Difference in j indices; acts as offset.
-        new_i (list) [-]: Updated list of i indices from shared area in area.
-        new_j (list) [-]: Updated list of i indices from shared area in area.
-
-    Returns:
-
-    '''
-
-    area_i = area_indices.i.tolist()
-    area_j = area_indices.j.tolist()
-    other_i = other_indices.i.tolist()
-    other_j = other_indices.j.tolist()
-
-    # find difference in i and j
-    diff_i = [(export - lease) for (export, lease) in zip(other_i, area_i)][0]
-    diff_j = [(export - lease) for (export, lease) in zip(other_j, area_j)][0]
-
-    # add difference to area
-    new_i = [point + diff_i for point in area.i]
-    new_j = [point + diff_j for point in area.j]
-
-    # update area pd.DataFrame
-    area.drop(['i', 'j'], 1, inplace=True)
-    area['i'] = new_i
-    area['j'] = new_j
-
-    return area
+    
+    module_logger.info("Preparing grid...")
+    
+    # Drop the i,j columns and join the two grids
+    grid_df_static = grid_df_static.drop(["i", "j"], axis=1)
+    grid_df_clipped = grid_df_clipped.drop(["i", "j"], axis=1)
+    grid_df_joined = grid_df_static.append(grid_df_clipped, ignore_index=True)
+    
+    # Initalise the Grid object
+    grid = Grid(grid_df_joined,
+                network_graph,
+                lease_polygon)
+    
+    return grid
 
 
-def get_neighbours_distance(grid_dict):
+def get_neighbours_distance(grid_df):
 
     '''Get distance between neighbouring points for all points defined in
-    grid_dict.
-
-    Args:
-        grid_dict(dict) [-]: Grid represented as dictionary,
-            Key: i, j indices; Values: index, x coord,  y coord, z coord.
-
-    Attributes:
-        edge_weights (dict) [-]: Structured dictionary for NetworkX.
+    grid_df.
 
     Return:
-        edge_weights.
+        edge_weights (dict) [-]: Structured dictionary for NetworkX.
 
     '''
 
-    module_logger.info("Checking distance to neighbours...")
-
-    edge_weights = {point[0]: get_weights(key, grid_dict)
-                    for key, point in grid_dict.iteritems()}
+    edge_weights = {point.id: get_metric_weights(point.id,
+                                                 grid_df,
+                                                 edge_length)
+                                            for _, point in grid_df.iterrows()}
 
     return edge_weights
 
 
-def get_neighbours_gradient(grid_dict):
+def get_neighbours_gradient(grid_df):
 
     '''Get gradient between neighbouring points for all points defined in
     grid_dict.
@@ -412,12 +243,12 @@ def get_neighbours_gradient(grid_dict):
 
     '''
 
-    module_logger.info("Checking gradient to neighbours...")
+    edge_gradients = {point.id: get_metric_weights(point.id,
+                                                   grid_df,
+                                                   gradient)
+                                            for _, point in grid_df.iterrows()}
 
-    gradients = {point[0]: get_gradients(key, grid_dict)
-                 for key, point in grid_dict.iteritems()}
-
-    return gradients
+    return edge_gradients
 
 
 def get_exclusions(site_data, export_data):
@@ -452,57 +283,8 @@ def get_exclusions(site_data, export_data):
     return all_exclusions
 
 
-def remove_exclusion_zones(all_exclusions, grid):
-
-    '''Remove exclusion zones from the area. Call the remove_exclusion_zones
-    method from the Grid class.
-
-    Args:
-        all_exclusions (list) [-]:  List of Shapely Polygon objects.
-        grid (object) [-]: Instance of Grid object.
-
-    Attributes:
-        excluded_points (list) [-]: Index of points to be removed.
-
-    '''
-
-    module_logger.info("Checking for exclusion zones...")
-
-    if all_exclusions:
-
-        excluded_points = grid.get_exclusion_zone_points(all_exclusions)
-
-        grid.graph = grid.remove_points_from_graph(excluded_points, grid.graph)
-
-        msg = ("Number of points removed in exclusion zones: {}".format(
-               len(excluded_points)))
-
-        module_logger.info(msg)
-
-    return
-
-
-def apply_gradient_constraint(maximum_gradient, grid, grads):
-
-    '''Remove points which breach gradient constraint. Call gradient_constraint
-    method from Grid class.
-
-    Args:
-        maximum_gradient (float) [deg]: Gradient constraint to be applied.
-        grid (object) [-]: Instance of Grid object.
-        grads (dict) [degrees] Structured dictionary of gradients.
-
-    '''
-
-    module_logger.info("Checking gradient constraints...")
-
-    constrained_lines = grid.gradient_constraint(maximum_gradient, grads)
-
-    return constrained_lines
-
-
-def apply_equipment_constraints(options,
-                                grid,
+def apply_equipment_constraints(grid,
+                                options,
                                 constraint_type=2,
                                 preselected=None):
 
@@ -568,131 +350,71 @@ def apply_equipment_constraints(options,
     return valid_installers
 
 
-def get_gradients(indices, points):
+def get_metric_weights(index, grid_df, metric):
+    
+    point_ids, metrics = get_metric_edges(index, grid_df, metric)
+    metrics_weights = weights_from_metrics(point_ids, metrics)
 
-    '''Get gradients between point defined by indices and all neighbours.
+    return metrics_weights
+
+
+def get_metric_edges(index, grid_df, metric):
+
+    '''Find metric along edges to neighbours of point defined by index.
 
     Args:
-        indices (tuple) [-]: i and j indices of point under consideration.
-        points (dict) [-]: Grid represented as dictionary,
-            Key: i, j indices; Values: index, x coord,  y coord, z coord.
-
-    Attributes:
-        p1 (tuple) [-]: Coordinates of point under consideration, x, y, z.
-        local_list (list) [-]: List of neighbour points x, y, z coords.
-        markers (list) [-]: List of neighbour points index values.
-        gradients (list) [m]: Edge gradients.
-        gradients_dict (dict) [-]: Structured dictionary of gradients.
-
-    Return:
-        gradients_dict
+        index (tuple) [-]: id of point under consideration.
+        grid_df (pd.DataFrame) [-]: Grid represented as dataframe
+        metric (function): metric to apply between points
 
     '''
+    
+    id_indexed_grid_df = grid_df.set_index("id")
+    ij_indexed_grid_df = grid_df.set_index(['i', 'j'])
 
-    p1 = (points[indices][1], points[indices][2], points[indices][3])
+    id_point = id_indexed_grid_df.loc[index]
+    id_point_coords = (id_point.x, id_point.y, id_point['layer 1 start'])
+    i_index = id_point.i
+    j_index = id_point.j
+    
+    search_ij = [(i_index+i, j_index+j) for i in (-1, 0, 1)
+                                        for j in (-1, 0, 1)
+                                                        if i != 0 or j != 0]
+    
+    metrics = []
+    point_ids = []
+    
+    for i, j in search_ij:
 
-    local_list, markers = get_adjacent_points(indices, points)
+        if (i, j) in ij_indexed_grid_df.index:
 
-    gradients = [gradient(p1, p2) for p2 in local_list]
+            ij_point = ij_indexed_grid_df.loc[i, j]
+            ij_point_coords = (ij_point.x,
+                               ij_point.y,
+                               ij_point['layer 1 start'])
+            ij_metric = metric(id_point_coords, ij_point_coords)
 
-    gradients_dict = make_weight_dict(gradients, markers)
+            point_ids.append(int(ij_point.id))
+            metrics.append(ij_metric)
+            
+    return point_ids, metrics
 
-    return gradients_dict
 
+def weights_from_metrics(indices, metrics):
 
-def get_weights(indices, points):
-
-    '''Get distance between point defined by indices and all neighbours.
+    '''Convert metric data into format required for networkx graph object.
 
     Args:
-        indices (tuple) [-]: i and j indices of point under consideration.
-        points (dict) [-]: Grid represented as dictionary,
-            Key: i, j indices; Values: index, x coord,  y coord, z coord.
-
-    Attributes:
-        p1 (tuple) [-]: Coordinates of point under consideration, x, y, z.
-        local_list (list) [-]: List of neighbour points x, y, z coords.
-        markers (list) [-]: List of neighbour points index values.
-        edges (list) [m]: Edge lengths.
-        edges_dict (dict) [-]: Structured dictionary for NetworkX.
+        indices (list) [-]: Index of points upon which the edges terminate.
+        metrics (list) [-]: Metric values.
 
     Return:
-        edges_dict
-
-    '''
-
-    p1 = (points[indices][1], points[indices][2], points[indices][3])
-
-    local_list, markers = get_adjacent_points(indices, points)
-
-    edges = [edge_length(p1, p2) for p2 in local_list]
-
-    edges_dict = make_weight_dict(edges, markers)
-
-    return edges_dict
-
-
-def get_adjacent_points(indices, points):
-
-    '''Find neighbours in group points of point defined by indices.
-
-    Args:
-        indices (tuple) [-]: i and j indices of point under consideration.
-        points (dict) [-]: Grid represented as dictionary,
-            Key: i, j indices; Values: index, x coord,  y coord, z coord.
-
-    Attributes:
-        i_index (int) [-]: i index of point under consideration.
-        j_index (int) [-]: j index of point under consideration.
-        local_list (list) [-]: List of neighbour points x, y, z coords.
-        markers (list) [-]: List of neighbour points index values.
-
-    Return:
-        local_list
-        markers
-
-    Note:
-        based on http://stackoverflow.com/questions/2373306/
-
-    '''
-
-    i_index = indices[0]
-    j_index = indices[1]
-
-    local_list = []
-    append = local_list.append
-    markers = []
-    append_markers = markers.append
-
-    for x, y in [(i_index+i, j_index+j)
-                 for i in (-1, 0, 1) for j in (-1, 0, 1) if i != 0 or j != 0]:
-
-        if (x, y) in points:
-
-            append((points[(x, y)][1:]))
-            append_markers(points[(x, y)][0])
-
-    return local_list, markers
-
-
-def make_weight_dict(edges, markers):
-
-    '''Convert edge data into format required for networkx graph object.
-
-    Args:
-        edges (list) [m]: Edge lengths.
-        markers (list) [-]: Index of points upon which the edges terminate.
-
-    Attributes:
         weight_dict (dict) [-]: Structured dictionary.
 
-    Return:
-        weight_dict.
-
     '''
 
-    weight_dict = \
-        {marker: {'weight': edge} for marker, edge in zip(markers, edges)}
+    weight_dict = {index: {'weight': metric}
+                                for index, metric in zip(indices, metrics)}
 
     return weight_dict
 
@@ -705,11 +427,8 @@ def edge_length(p1, p2):
         p1 (tuple) [m]: Point one x, y, z coordinates.
         p1 (tuple) [m]: Point two x, y, z coordinates.
 
-    Attributes:
-        edge_length (float) [m]: Distance.
-
     Return:
-        edge_length.
+        edge_length (float) [m]
 
     '''
 
@@ -727,13 +446,6 @@ def gradient(p1, p2):
         p1 (tuple) [m]: Point one x, y, z coordinates.
         p1 (tuple) [m]: Point two x, y, z coordinates.
 
-    Attributes:
-        delta_x (float) [m]: Distance in x direction.
-        delta_y (float) [m]: Distance in y direction.
-        delta_z (float) [m]: Distance in z direction.
-        horizontal_distance (float) [m]: Distance in x-y plane.
-        angle (float) [rad]: Gradient expressed in rads.
-
     Return:
         angle (float) [degrees]: Gradient expressed in degrees.
 
@@ -743,7 +455,7 @@ def gradient(p1, p2):
     delta_y = p2[1] - p1[1]
     delta_z = p2[2] - p1[2]
 
-    horizontal_distance = np.sqrt(np.square(delta_x)+np.square(delta_y))
-    angle = np.arctan(delta_z/horizontal_distance)
+    horizontal_distance = np.sqrt(np.square(delta_x) + np.square(delta_y))
+    angle = np.arctan(delta_z / horizontal_distance)
 
     return abs(np.degrees(angle))
