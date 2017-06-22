@@ -295,11 +295,9 @@ class Electrical(object):
                 all_solutions_data[tool] = tool_result
                 all_solutions_cost[tool] = tool_result.total_cost
 
-                if ordered is True:
+                if ordered is True: break  # Stop when solution is found
 
-                    break  # Stop when solution is found
-
-            except (nx.NetworkXNoPath, KeyError):
+            except (nx.NetworkXNoPath):
 
                 msg = ("Could not find cable routes for "
                        "installation tool: {}.".format(tool))
