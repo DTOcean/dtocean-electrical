@@ -12,7 +12,6 @@ module_logger = logging.getLogger(__name__)
 
 import pandas as pd
 from shapely.geometry import Point, LineString
-from copy import deepcopy
 
 
 class Grid(object):
@@ -69,25 +68,28 @@ class Grid(object):
 
     '''
 
-    def __init__(self, all_points):
+    def __init__(self, all_points,
+                       graph,
+                       lease_boundary):
 
-        self.n_points = len(all_points)
-        self.points = []
         self.grid_pd = all_points
-        self.graph_ready = dict
+        self.graph = graph
+        self.lease_boundary = lease_boundary
+        self.n_points = len(all_points)
+        self.points = {}
         self.all_ids = []
-        self.all_i = []
-        self.all_j = []
         self.all_x = []
         self.all_y = []
-        self.graph = None
         self.soil_types = self.get_soil_types()
         self.soil_coverage = self.get_soil_coverage()
         self.jetting_graph = None
         self.ploughing_graph = None
         self.cutting_graph = None
         self.dredging_graph = None
-        self.lease_boundary = None
+        
+        self.add_points_to_grid()
+        
+        return
 
     def __str__(self):
 
@@ -106,8 +108,10 @@ class Grid(object):
             list: Soil types.
 
         '''
+        
+        all_soil_types = pd.unique(self.grid_pd['layer 1 type']).tolist()
 
-        return pd.unique(self.grid_pd['layer 1 type']).tolist()
+        return all_soil_types
 
     def get_soil_coverage(self):
         
@@ -119,7 +123,7 @@ class Grid(object):
         '''
 
         soil_coverage = {key: None for key in self.soil_types}
-
+        
         for soil in self.soil_types:
 
             number_soil_points = \
@@ -151,14 +155,12 @@ class Grid(object):
 
         '''
 
-        all_points = \
-            [GridPoint(index, row) for index, row in self.grid_pd.iterrows()]
+        all_points = {row.id: GridPoint(row.id, row)
+                                    for _, row in self.grid_pd.iterrows()}
 
         self.points = all_points
 #        self.n_points = len(self.points)
         self.all_ids = self.grid_pd.id
-        self.all_i = self.grid_pd.i
-        self.all_j = self.grid_pd.j
         self.all_x = self.grid_pd.x
         self.all_y = self.grid_pd.y
 
@@ -193,18 +195,44 @@ class Grid(object):
         for exclusion_zone in exclusion_zones:
 
             local_exclusions = \
-                [point.index for point in self.points
+                [point.index for point in self.points.values()
                  if exclusion_zone.contains(point.shapely_point)]
 
             all_exclusions.extend(local_exclusions)
 
             local_exclusions = \
-                [point.index for point in self.points
+                [point.index for point in self.points.values()
                  if exclusion_zone.intersects(point.shapely_point)]
 
             all_exclusions.extend(local_exclusions)
 
         return list(set(all_exclusions))
+
+    def remove_exclusion_zones(self, all_exclusions):
+    
+        '''Remove exclusion zones from the area.
+    
+        Args:
+            all_exclusions (list) [-]:  List of Shapely Polygon objects.
+            grid (object) [-]: Instance of Grid object.
+    
+        Attributes:
+            excluded_points (list) [-]: Index of points to be removed.
+    
+        '''
+    
+        module_logger.info("Checking for exclusion zones...")
+    
+        if all_exclusions:
+    
+            excluded_points = self.get_exclusion_zone_points(all_exclusions)
+            self.graph.remove_nodes_from(excluded_points)
+    
+            msg = ("Number of points removed in exclusion zones: {}".format(
+                   len(excluded_points)))
+            module_logger.info(msg)
+                
+        return
 
     def gradient_constraint(self, gradient_limit, all_grads):
 
@@ -222,10 +250,9 @@ class Grid(object):
         Returns:
             none.
 
-        Note:
-            This calls _remove_edges to remove the edge from the graph object.
-
         '''
+        
+        module_logger.info("Checking gradient constraints...")
 
         constrained_edges = \
             [(key, sub_key) for key, val in all_grads.iteritems()
@@ -237,28 +264,10 @@ class Grid(object):
         logMsg = "Removing {} constrained edges".format(n_edges)
         module_logger.info(logMsg)
 
-        self._remove_edges(constrained_edges)
-        
+        self.graph.remove_edges_from(constrained_edges)
         constrained_lines = self._make_lines(constrained_edges)
 
         return constrained_lines
-
-    def _remove_edges(self, constrained_edges):
-
-        '''Remove edge between two points in the networkx graph object.
-
-        Args:
-            constrained_edges (list): List of tuples containing u and v, where
-            u and v are the Point ids defining the edge(s) to be removed.
-
-        Returns:
-            none.
-
-        '''
-        
-        self.graph.remove_edges_from(constrained_edges)
-
-        return
 
     def check_equipment_soil_compatibility_site(self, install_matrix):
 
@@ -302,17 +311,17 @@ class Grid(object):
 
         '''
 
-        points = \
-           self.grid_pd[-self.grid_pd['layer 1 type'].isin(soil_list)].ix[:, 'id']
+        points = self.grid_pd[
+                    -self.grid_pd['layer 1 type'].isin(soil_list)].ix[:, 'id']
 
 #        tool_points = self.graph_filter(soil_list)
 #
 #        # default is to look at all three burial protection levels
 #        final_graphs = self.burial_protection_index(tool_points)
 
-        updated_graph = (
-            self.remove_points_from_graph(points, deepcopy(self.graph)))
-
+        updated_graph = self.graph.copy()
+        updated_graph.remove_nodes_from(points)
+        
         if technique == 'Jetting':
 
             self.jetting_graph = updated_graph
@@ -379,8 +388,8 @@ class Grid(object):
 
             points_to_remove = self.find_points_to_remove(valid_points)
 
-            updated_graph = self.remove_points_from_graph(points_to_remove,
-                                                          deepcopy(self.graph))
+            updated_graph = self.graph.copy()
+            updated_graph.remove_nodes_from(points_to_remove)
 
             filtered_grid[bpi_level] = updated_graph
 
@@ -417,42 +426,14 @@ class Grid(object):
 
         '''
 
-# This is the inverse - returns points which are not in the list
-# points = (
-# self.grid_pd[-self.grid_pd['layer 1 type'].isin(soil_list)].ix[:,'id'])
+        # This is the inverse - returns points which are not in the list
+        # points = (
+        # self.grid_pd[-self.grid_pd['layer 1 type'].isin(soil_list)].ix[:,'id'])
 
         points = self.grid_pd[
             self.grid_pd['layer 1 type'].isin(soil_list)].ix[:, 'id']
 
         return points
-
-    def remove_points_from_graph(self, points_list, graph):
-
-        '''Remove points from the networkx graph object.
-
-        Args:
-            points_list (list): List of points to be removed.
-            graph (object): Networkx graph object from which the points are to
-                be removed from.
-
-        Returns:
-            graph (object): Networkx graph object with points removed.
-
-        '''
-
-        graph.remove_nodes_from(points_list)
-
-        return graph
-
-    def grid_as_dict(self):
-
-        points_as_dict = \
-            {(value.i, value.j):
-                (idx, value.x, value.y, value['layer 1 start'])
-
-                for idx, value in self.grid_pd.iterrows()}
-
-        return points_as_dict
     
     def _make_lines(self, edge_id_list):
         
@@ -460,17 +441,16 @@ class Grid(object):
         
         for edge in edge_id_list:
                         
-            start_row = self.grid_pd[self.grid_pd.id == edge[0]]
-            end_row = self.grid_pd[self.grid_pd.id == edge[1]]
+            start_row = self.grid_pd.loc[edge[0]]
+            end_row = self.grid_pd.loc[edge[1]]
             
-            line = LineString([
-                            (start_row.iloc[0]["x"], start_row.iloc[0]["y"]),
-                            (end_row.iloc[0]["x"], end_row.iloc[0]["y"])
-                            ])
+            line = LineString([(start_row["x"], start_row["y"]),
+                               (end_row["x"], end_row["y"])])
             
             all_lines.append(line)
                     
         return all_lines
+
 
 class GridPoint(object):
 
@@ -505,8 +485,6 @@ class GridPoint(object):
     def __init__(self, index, data):
 
         self.index = index
-        self.i = data['i']
-        self.j = data['j']
         self.x = data['x']
         self.y = data['y']
         self.z = data['layer 1 start']
