@@ -1,0 +1,20 @@
+# REQUIREMENTS FOR CONDA INSTALLATION
+
+# INSTALLATION REQUIRED DEPENDENCIES
+descartes
+matplotlib
+networkx
+numpy
+pandas
+polite >=0.9
+pypower
+pyqt =4.11.4
+scipy
+shapely
+
+# TEST DEPENDENCIES
+pytest-cov
+openpyxl
+xlrd
+xlwt
+
