@@ -63,7 +63,7 @@ class CleanPyc(Command):
                 yield os.path.join(root, fname)
 
 setup(name='dtocean-electrical',
-      version='1.1.0.dev0',
+      version='1.1.dev0',
       description='Electrical sub-systems module for the DTOcean tools',
       author='Adam Collin, Mathew Topper',
       author_email='A.Collin@ed.ac.uk, damm_horse@yahoo.co.uk',
