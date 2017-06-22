@@ -1,3 +1,8 @@
+[![appveyor](https://ci.appveyor.com/api/projects/status/github/DTOcean/dtocean-electrical?branch=master&svg=true)](https://ci.appveyor.com/project/DTOcean/dtocean-electrical)
+[![codecov](https://codecov.io/gh/DTOcean/dtocean-electrical/branch/master/graph/badge.svg)](https://codecov.io/gh/DTOcean/dtocean-electrical)
+[![Lintly](https://lintly.com/gh/DTOcean/dtocean-electrical/badge.svg)](https://lintly.com/gh/DTOcean/dtocean-electrical/)
+[![release](https://img.shields.io/github/release/DTOcean/dtocean-electrical.svg)](https://github.com/DTOcean/dtocean-electrical/releases/latest)
+
 # DTOcean Electrical Sub-Systems Module
 
 ## Installation
