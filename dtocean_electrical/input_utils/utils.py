@@ -11,10 +11,10 @@ This collection of functions perform simple processes on the input data.
 """
 
 import operator
-from shapely.geometry import Polygon, Point
 
-from scipy import spatial
 import numpy as np
+from scipy import spatial
+from shapely.geometry import Polygon, Point
 
 
 def hydro_process(device_power_per_seastate,
@@ -239,21 +239,22 @@ def set_burial_from_bpi(row):
     '''
 
     if row['layer 1 type'] in \
-            ('hard glacial till', 'hard rock', 'gravel cobble'):
+            ['hard glacial till', 'hard rock', 'gravel cobble']:
 
         bpi = 0.0
 
-    elif row['layer 1 type'] in ('medium sand'):
+    elif row['layer 1 type'] in ['medium sand']:
 
         bpi = 0.5
 
-    elif row['layer 1 type'] in ('very soft clay', 'stiff clay'):
+    elif row['layer 1 type'] in ['very soft clay', 'stiff clay']:
 
         bpi = 1.0
-
+        
     else:
-
-        # add warning that soil type is not compatible
-        bpi = 0.0
+        
+        errStr = "Sediment type '{}' is not recognised".format(
+                                                        row['layer 1 type'])
+        raise ValueError(errStr)
 
     return bpi
