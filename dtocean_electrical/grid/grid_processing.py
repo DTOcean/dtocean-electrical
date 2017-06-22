@@ -21,7 +21,7 @@ from .grid import Grid
 module_logger = logging.getLogger(__name__)
 
 
-def grid_processing(site_data, export_data, options, n_neighbours=8):
+def grid_processing(site_data, export_data, options):
 
     '''Function to control bathymetry processing stages. This first creates
     a merged bathymetry and then creates a Grid object.
@@ -30,8 +30,6 @@ def grid_processing(site_data, export_data, options, n_neighbours=8):
         site_data (object) [-]: Instance of the ElectricalSiteData class.
         export_data (object) [-]: Instance of the ElectricalExportData class.
         options (object) [-]: Instance of the ConfigurationOptions class.
-        n_neighbours (int) [-]: Number of neighbours to consider when building
-            network graph.
 
     Attributes:
         exclusion_zones (list) [-]: List of Shapely Polygon objects.
