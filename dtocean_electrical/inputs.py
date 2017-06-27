@@ -834,8 +834,9 @@ class ElectricalArrayData(object):
 
         '''
 
-        bins = 1.0/len(array_output)
-        edges = np.linspace(bins, 1, len(array_output))
+        bin_width = 1.0 / len(array_output)
+        bin_offset = bin_width / 2
+        centers = np.linspace(bin_offset, 1 - bin_offset, len(array_output))
 
         if type(power_factor) == list:
             
@@ -855,10 +856,10 @@ class ElectricalArrayData(object):
 
             modified_power_factor = []
             # apply range
-            for e in edges:
+            for c in centers:
                 for range_ in power_factor_range:
-                    if range_[0]< e <= range_[1]:
-                        modified_power_factor.append((e, range_[2]))
+                    if range_[0]< c <= range_[1]:
+                        modified_power_factor.append((c, range_[2]))
                         break
                     
             self.machine_data.power_factor = modified_power_factor
@@ -866,7 +867,7 @@ class ElectricalArrayData(object):
         else:
 
             self.machine_data.power_factor = (
-                zip(edges, [power_factor]*len(array_output))
+                zip(centers, [power_factor]*len(array_output))
                 )
 
         return
