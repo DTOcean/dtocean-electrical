@@ -1529,20 +1529,9 @@ class Network(object):
         '''Collect the cable routes in pd.DataFrame for downstream analysis.
 
         Args:
+            grid
             all_x
             all_y
-
-        Attributes:
-            marker
-            db_ref
-            grid_id
-            burial_depth
-            split_pipe
-            cable_x
-            cable_y
-            cable_routes
-
-        Returns:
 
         '''
 
