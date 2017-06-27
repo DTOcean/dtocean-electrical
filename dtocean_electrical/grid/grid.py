@@ -159,10 +159,11 @@ class Grid(object):
                                     for _, row in self.grid_pd.iterrows()}
 
         self.points = all_points
-#        self.n_points = len(self.points)
-        self.all_ids = self.grid_pd.id
-        self.all_x = self.grid_pd.x
-        self.all_y = self.grid_pd.y
+
+        id_grid_pd = self.grid_pd.set_index("id", drop=False)
+        self.all_ids = id_grid_pd.id
+        self.all_x = id_grid_pd.x
+        self.all_y = id_grid_pd.y
 
         return
 
