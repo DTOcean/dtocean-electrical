@@ -16,6 +16,7 @@ import bisect
 from copy import deepcopy
 
 import numpy as np
+import networkx as nx
 from scipy import spatial
 from scipy.cluster.vq import vq, kmeans2
 from shapely.geometry import LineString, Point, LinearRing
@@ -1387,7 +1388,9 @@ class RadialNetwork(Optimiser):
         '''
         
         seabed_graph = self.select_seabed(installation_tool)
-
+        
+        if seabed_graph.size() == 0: raise nx.NetworkXNoPath
+        
         combo_export, combo_array, combo_devices = self.control_simulations()
 
         burial_targets = self.meta_data.grid.grid_pd[['id',
@@ -1664,6 +1667,8 @@ class StarNetwork(Optimiser):
         '''
         
         seabed_graph = self.select_seabed(installation_tool)
+        
+        if seabed_graph.size() == 0: raise nx.NetworkXNoPath
 
         network_count = 0
 
