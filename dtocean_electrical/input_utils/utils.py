@@ -238,16 +238,19 @@ def set_burial_from_bpi(row):
 
     '''
 
-    if row['layer 1 type'] in \
-            ['hard glacial till', 'hard rock', 'gravel cobble']:
+    if row['layer 1 type'] in ['hard glacial till',
+                               'cemented',
+                               'soft rock coral',
+                               'hard rock',
+                               'gravel cobble']:
 
         bpi = 0.0
 
-    elif row['layer 1 type'] in ['medium sand']:
+    elif 'sand' in row['layer 1 type']:
 
         bpi = 0.5
 
-    elif row['layer 1 type'] in ['very soft clay', 'stiff clay']:
+    elif 'clay' in row['layer 1 type']:
 
         bpi = 1.0
         
