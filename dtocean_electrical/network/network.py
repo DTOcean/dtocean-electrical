@@ -1554,8 +1554,8 @@ class Network(object):
 
         for cable in (self.array_cables + self.export_cables):
 
-            marker += [cable.marker]*len(cable.route)
-            db_ref += [cable.db_key]*len(cable.route)
+            marker += [cable.marker] * len(cable.route)
+            db_ref += [cable.db_key] * len(cable.route)
             burial_depth += cable.target_burial_depth
             split_pipe += cable.split_pipe
             grid_id += cable.route
@@ -1581,9 +1581,7 @@ class Network(object):
                       }
 
         cable_route_data = pd.DataFrame(cable_dict)
-        
-        print cable_route_data.head()
-        
+                
         self.cable_routes = cable_route_data
 
         return

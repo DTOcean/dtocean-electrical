@@ -9,13 +9,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
-- Reimplement constraints recording and plotting.
+- Re-implement constraints recording and plotting.
 - Add change log.
 
 ### Changed
 
 - Changed grid processing to improve methodology for joining lease area and
   cable corridor.
+- Excluded grid points are now removed from Grid.grid_pd and Grid.points as
+  well as Grid.graph.
+- Emit a nx.NetworkXNoPath error in the optimiser if there are no point in the
+  selected tool's graph.
 
 ### Fixed
 
@@ -25,6 +29,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed issue with the substation location algorithm, when devices where in
   symmetric layouts.
 - Fixed bug with checking soil types.
+- Use power histogram bin centres for power calculations rather than edges.
+- Add missing soil types for setting burial protection index.
+- Ensure all Grid attributes are referenced by the point "id".
+- Fixed Network make_cable_routes so that cable points are returned in the
+  correct order.
 
 ### Removed
 
