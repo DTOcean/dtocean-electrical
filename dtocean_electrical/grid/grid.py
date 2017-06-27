@@ -227,8 +227,17 @@ class Grid(object):
         if all_exclusions:
     
             excluded_points = self.get_exclusion_zone_points(all_exclusions)
+            
+            # Remove from graph
             self.graph.remove_nodes_from(excluded_points)
-    
+            
+            # Remove from dataframe
+            self.grid_pd = self.grid_pd[self.grid_pd.id != excluded_points]
+            
+            # Remove from points dict
+            for delp in excluded_points:
+                self.points.pop(delp, None)
+                
             msg = ("Number of points removed in exclusion zones: {}".format(
                    len(excluded_points)))
             module_logger.info(msg)
