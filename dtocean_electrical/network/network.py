@@ -1554,32 +1554,37 @@ class Network(object):
 
         for cable in (self.array_cables + self.export_cables):
 
-                marker += [cable.marker]*len(cable.route)
-                db_ref += [cable.db_key]*len(cable.route)
-                burial_depth += cable.target_burial_depth
-                split_pipe += cable.split_pipe
-                grid_id += cable.route
+            marker += [cable.marker]*len(cable.route)
+            db_ref += [cable.db_key]*len(cable.route)
+            burial_depth += cable.target_burial_depth
+            split_pipe += cable.split_pipe
+            grid_id += cable.route
 
         cable_x, cable_y = \
             self._convert_path_to_coordinates(grid_id, all_x, all_y)
+            
+        indexed_grid = grid.set_index("id")
+        depth_cols = ['layer 1 start'] * len(grid_id)
+        type_cols = ['layer 1 type'] * len(grid_id)
+        
+        cable_depth = indexed_grid.lookup(grid_id, depth_cols)
+        cable_type = indexed_grid.lookup(grid_id, type_cols)
 
         cable_dict = {"db ref": db_ref,
                       "marker": marker,
                       "x": cable_x,
                       "y": cable_y,
                       "burial_depth":  burial_depth,
-                      "split pipe": split_pipe
+                      "split pipe": split_pipe,
+                      'layer 1 start': cable_depth,
+                      'layer 1 type': cable_type
                       }
 
         cable_route_data = pd.DataFrame(cable_dict)
-
-        # add bathy data by merging with grid_pd
-        cols = ['x', 'y', 'layer 1 type', 'layer 1 start']
-
-        self.cable_routes = \
-            pd.merge(cable_route_data, grid[cols], how='inner', on=['x','y'])
-            
-        self.cable_routes.sort('marker', inplace=True)
+        
+        print cable_route_data.head()
+        
+        self.cable_routes = cable_route_data
 
         return
 
