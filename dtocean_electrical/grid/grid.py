@@ -232,7 +232,7 @@ class Grid(object):
             self.graph.remove_nodes_from(excluded_points)
             
             # Remove from dataframe
-            self.grid_pd = self.grid_pd[self.grid_pd.id != excluded_points]
+            self.grid_pd = self.grid_pd[~self.grid_pd.id.isin(excluded_points)]
             
             # Remove from points dict
             for delp in excluded_points:

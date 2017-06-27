@@ -853,12 +853,12 @@ class ElectricalArrayData(object):
                     else:
                         pf_range = (0, item[0],  item[1])
                         power_factor_range.append(pf_range)
-
+                        
             modified_power_factor = []
             # apply range
             for c in centers:
                 for range_ in power_factor_range:
-                    if range_[0]< c <= range_[1]:
+                    if range_[0] < c <= range_[1]:
                         modified_power_factor.append((c, range_[2]))
                         break
                     
@@ -867,7 +867,7 @@ class ElectricalArrayData(object):
         else:
 
             self.machine_data.power_factor = (
-                zip(centers, [power_factor]*len(array_output))
+                zip(centers, [power_factor] * len(array_output))
                 )
 
         return
