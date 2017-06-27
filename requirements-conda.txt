@@ -14,6 +14,7 @@ shapely
 
 # TEST DEPENDENCIES
 pytest-cov
+pytest-mock
 openpyxl
 xlrd
 xlwt
