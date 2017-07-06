@@ -8,19 +8,20 @@ This module defines the DTOcean electrical subsystems array routing functions.
    
 .. moduleauthor:: Adam Collin <a.collin@ed.ac.uk>
 """
-import os
 
 import logging
+import itertools
+
+import numpy as np
+import networkx as nx
+import scipy.spatial
+from scipy import spatial
+from scipy.misc import comb
+from shapely.geometry import LineString, Point, MultiPoint
+
+
 module_logger = logging.getLogger(__name__)
 
-import pandas as pd
-import numpy as np
-import scipy.spatial
-import itertools
-from shapely.geometry import LineString, Point, MultiPoint, Polygon
-#from dtocean_electrical.grid import Grid, GridPoint
-import networkx as nx
-from scipy import spatial
 
 def snap_to_grid(grid, point, lease):
     
@@ -238,18 +239,58 @@ def extend_line(p1, p2):
     
     return LineString([a,b])
 
+
+def dijkstra(graph, a, b, grid=None):
+    
+    def log_error():
+        
+        id_grid_pd = grid.grid_pd.set_index("id")
+        target_missing = b not in id_grid_pd.index
+        
+        if target_missing:
+            
+            logMsg = "Target node '{}' is not in grid".format(b)
+        
+        else:
+        
+            source_node = id_grid_pd.loc[a]
+            target_node = id_grid_pd.loc[b]
+            logMsg = ("Point ({}, {}) not reachable from point "
+                      "({}, {})").format(target_node["x"],
+                                         target_node["y"],
+                                         source_node["x"],
+                                         source_node["y"])
+                    
+        module_logger.debug(logMsg)
+        
+        return
+
+    # For efficiency copy source from networkx
+    (lengths, paths) = nx.single_source_dijkstra(graph, a, b)
+    
+    try:
+        path = paths[b]
+    except KeyError:
+        if grid is not None: log_error()
+        raise nx.NetworkXNoPath("node {} not reachable from {}".format(b, a))
+            
+    length = lengths[b]
+    
+    return length, path
+
+
 def get_export(cp_loc, landing_loc, grid, graph):
     
     '''Get the export cable route and length.
-    
     '''
     
     a = get_single_location(landing_loc[:2], grid.grid_pd)
     b = get_single_location(cp_loc[:2], grid.grid_pd)
-    length = nx.dijkstra_path_length(graph,a,b)
-    route = tuple(nx.dijkstra_path(graph,a,b))
+    
+    length, route = dijkstra(graph, a, b, grid)
     
     return length, route
+
 
 def calculate_distance(array_layout, n_oec, substation_location):
     
@@ -292,57 +333,64 @@ def calculate_distance(array_layout, n_oec, substation_location):
 
     return distance_array
 
-def calculate_distance_dijkstra(array_layout,
-                                n_oec,
+
+def calculate_distance_dijkstra(layout_grid,
                                 substation_location,
                                 grid,
-                                layout_grid,
                                 graph):
                                     
-    '''Calculate the distance between all devices in array_layout and between
+    '''Calculate the distance between all devices in layout_grid and between
     all devices and a fixed point defined by substation_location. This uses
     dijkstras algorithm to calculate the seabed distance.
 
     Args:
-        array_layout (dict) [m]: locations of each oec in the array.
-        n_oec (int) [-]: the number of oecs in the array.
+        layout_grid
         substation_location (float) [-]: substation_location as x,y,z.
         grid (object) [-]: grid object of seabed.
-
-    Attributes:
-        distance_list (list) [m]: list of device-device and device-substation
-            spacings.
-        distance_array (np.array) [m]: structured array of device-device and
-            device-substation spacings.
+        graph
             
     Returns:
         distance_array
-
-    Notes:
-        look at distance_array containing tuples?
+        path_array
         
     '''
-    
-    layout = create_new_for_analysis(array_layout, layout_grid)
-    
-#    layout = get_device_locations(array_layout, grid)
-#    layout 
+        
     layoutlist = [x[1] for x in layout_grid]
-    # insert substation location
+    
+    # Insert substation location
     substation_location = get_single_location(substation_location[:2],
                                               grid.grid_pd)
-    layoutlist.insert(0,substation_location)
+    layoutlist.insert(0, substation_location)
     
-    distance_list, path_list = zip(*
-        [(nx.dijkstra_path_length(graph,a,b),
-          tuple(nx.dijkstra_path(graph,a,b)))
-        for a, b
-        in itertools.product(np.asarray(layoutlist),repeat=2)])
+    # Initialise output arrays
+    nlocs = len(layoutlist)
+    distance_array = np.zeros([nlocs, nlocs])
+    path_array = np.empty([nlocs, nlocs], dtype=object)
+    
+    ncombos = int(comb(nlocs, 2))
+    module_logger.debug("{} node combinations found".format(ncombos))
+    
+    layout_ids = range(nlocs)
+    
+    for i, j in itertools.combinations(layout_ids, 2):
+        
+        module_logger.debug("Evaluating node combination "
+                            "({}, {})".format(i, j))
+        
+        a = layoutlist[i]
+        b = layoutlist[j]
+    
+        ij_length, ij_path = dijkstra(graph, a, b, grid)
+        
+        distance_array[i, j] = ij_length
+        path_array[i, j] = ij_path
+                  
+        # Reverse paths
+        distance_array[j, i] = ij_length
+        path_array[j, i] = ij_path[::-1]
+    
+    return distance_array, path_array
 
-    distance_array = np.array(distance_list).reshape(n_oec+1, n_oec+1)
-    path_array = np.array(path_list).reshape(n_oec+1, n_oec+1)
-    
-    return distance_array, path_array, layout
 
 def get_single_location(point, grid_points):
     
@@ -409,6 +457,7 @@ def get_device_locations(layout, site_grid):
     
     return device_on_grid
 
+
 def calculate_saving_vector(distance_vector, n_oec):
     
     '''Description.
@@ -425,18 +474,19 @@ def calculate_saving_vector(distance_vector, n_oec):
     '''
     
     saving_vector = [(i, j, distance_vector[0][i] - distance_vector[j][i])
-                    for i in range(0,n_oec+1)
-                    for j in range(0,n_oec+1)]
+                        for i in range(0, n_oec + 1)
+                            for j in range(0, n_oec + 1) if i != j]
 
     saving_vector_sorted = sorted(saving_vector,
                                   key=lambda i: (float(i[2])), reverse=True)
     # tidy up savings vector by removing self connecting nodes
     saving_vector_filtered = []
     for point in saving_vector_sorted:
-        if point[0]!=point[1] and point[2] >= 0.0:
+        if point[0] != point[1] and point[2] >= 0.0:
             saving_vector_filtered.append(point)
 
     return saving_vector_filtered
+
 
 def check_in_route(point_to_check, route):
     
@@ -910,3 +960,5 @@ def run_this_dijkstra(saving_vector, path, route, n_oec, string_max,
                 path = update_path(point, route)
 
     return path
+
+
