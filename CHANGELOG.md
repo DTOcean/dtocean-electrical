@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Re-implement constraints recording and plotting.
 - Add change log.
+- Add example which uses pickled inputs exported from dtocean-core.
+- Added edge_buffer option to ConfigurationOptions class to ensure substation
+  is located a certain distance away from the lease area edge.
 
 ### Changed
 
@@ -20,7 +23,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   well as Grid.graph.
 - Emit a nx.NetworkXNoPath error in the optimiser if there are no point in the
   selected tool's graph.
-
+- Made calls to Dijkstra's shortest path algorithm more efficient for radial
+  networks.
+  
 ### Fixed
 
 - Replaced incorrect Shapely object when calculating design limits.
