@@ -7,6 +7,7 @@ author:: Adam Collin <a.collin@ed.ac.uk>,
          Mathew Topper <dataonlygreater@gmail.com>
 
 """
+import pickle
 import logging
 
 import numpy as np
@@ -52,6 +53,18 @@ def grid_processing(site_data, export_data, options):
     
     network_graph = make_graph(site_data.bathymetry, clipped_export)
     gradient_dict = make_gradient_dict(site_data.bathymetry, clipped_export)
+    
+    #    # Dump these for hot start
+    #    nx.write_gpickle(network_graph, "network_graph.pkl")
+    #    
+    #    with open("gradient_dict.pkl", "wb") as fstream:
+    #        pickle.dump(gradient_dict, fstream)
+    #        
+    #    # Load these for hot start
+    #    network_graph = nx.read_gpickle("network_graph.pkl")
+    #    
+    #    with open("gradient_dict.pkl", "rb") as fstream:
+    #        gradient_dict = pickle.load(fstream)
 
     grid = make_grid(site_data.bathymetry,
                      clipped_export,
