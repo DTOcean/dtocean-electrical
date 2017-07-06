@@ -944,10 +944,11 @@ class ConfigurationOptions(object):
                  devices_per_string,
                  equipment_gradient_constraint,
                  equipment_soil_compatibility,
-                 installation_tool = None,
-                 umbilical_safety_factor = 1.4925,                 
-                 gravity = 9.80655,
-                 user_umbilical = None
+                 installation_tool=None,
+                 umbilical_safety_factor=1.4925,                 
+                 gravity=9.80655,
+                 user_umbilical=None,
+                 edge_buffer=None
                  ):
 
         self.network_configuration = network_configuration
@@ -970,6 +971,9 @@ class ConfigurationOptions(object):
         self.umbilical_safety_factor = umbilical_safety_factor
         self.gravity = gravity
         self.user_umbilical = user_umbilical
+        self.edge_buffer = edge_buffer
+        
+        return
 
     def binary_compatibility_matrix(self, matrix):
 
