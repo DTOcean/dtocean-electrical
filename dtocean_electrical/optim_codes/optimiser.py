@@ -331,16 +331,23 @@ class Optimiser(object):
 
                 self.transmission_voltages = transmission_voltage
 
+        module_logger.debug("Calculating array voltages...")
+
         device_loc = self.convert_layout_to_list()
 
         if 'Radial' in self.meta_data.options.network_configuration:
             # Radial    networks        
             # dimension array
-            local_cp,_ = self.set_substation_location(device_loc, 1)
-            distance_matrix = self.calculate_device_spacings(local_cp)
-
-            min_val, max_val, ave_val, chain = \
-                self.device_spacing_summary(distance_matrix)
+#            local_cp,_ = self.set_substation_location(device_loc, 1)
+#            distance_matrix, _ = connect.calculate_distance_dijkstra(
+#                                        self.meta_data.array_data.layout_grid,
+#                                        local_cp,
+#                                        self.meta_data.grid,
+#                                        self.meta_data.grid.graph
+#                                        )
+#
+#            min_val, max_val, ave_val, chain = \
+#                self.device_spacing_summary(distance_matrix)
 
 #            transmission_voltage = self.cross_check_limits(
 #                closest_greater_voltage, edge_to_shore, array_power)
@@ -481,24 +488,6 @@ class Optimiser(object):
                 safe_voltage = all_voltages[-1]
 
         return safe_voltage
-
-    def calculate_device_spacings(self, centre, overwrite = False):
-        
-        '''Some text.
-
-        '''
-
-        distance_matrix, path_matrix, devices = \
-            connect.calculate_distance_dijkstra(
-                self.meta_data.array_data.layout,
-                self.meta_data.array_data.n_devices,
-                centre,
-                self.meta_data.grid,
-                self.meta_data.array_data.layout_grid,
-                self.meta_data.grid.graph  # this is unfiltered graph 
-                )
-                
-        return distance_matrix
         
     def device_spacing_summary(self, distance_array):
         
@@ -1401,64 +1390,107 @@ class RadialNetwork(Optimiser):
         n_cp = 1 # fixed for ram compatibility
 
         device_loc = self.convert_layout_to_list()
+        
+        module_logger.debug("Setting substation location...")
 
         cp_loc, strings = self.set_substation_location(device_loc, n_cp)
 
+        module_logger.debug("Defining export cable route...")
+
         # get export cable here
-        export_length, export_route = connect.get_export(
-            cp_loc, self.meta_data.array_data.landing_point,
-            self.meta_data.grid, seabed_graph)
+        (export_length,
+         export_route) = connect.get_export(
+                                    cp_loc,
+                                    self.meta_data.array_data.landing_point,
+                                    self.meta_data.grid,
+                                    seabed_graph)
 
-        for simulation in zip(combo_export, combo_array, combo_devices):
+        module_logger.debug("Calculating array distances...")
 
+        (distance_matrix,
+         path_matrix) = connect.calculate_distance_dijkstra(
+                                    self.meta_data.array_data.layout_grid,
+                                    cp_loc,
+                                    self.meta_data.grid,
+                                    seabed_graph)
+
+        for i, simulation in enumerate(zip(combo_export,
+                                           combo_array,
+                                           combo_devices)):
+            
             export_voltage = simulation[0]
             array_voltage = simulation[1]
             device_per_string = simulation[2]
+            
+            module_logger.debug("Evaluating simulation: {} ".format(i))
+            module_logger.debug("Selecting components")
 
             components = self.db_compatibility(
-                self.meta_data.database,
-                self.meta_data.array_data.machine_data.voltage,
-                self.meta_data.array_data.total_power, export_voltage,
-                array_voltage)
+                            self.meta_data.database,
+                            self.meta_data.array_data.machine_data.voltage,
+                            self.meta_data.array_data.total_power,
+                            export_voltage,
+                            array_voltage)
 
-            sol, distances, paths = self.brute_force_method(
-                n_cp, device_per_string+1, device_loc, cp_loc, seabed_graph)
+            sol = self.brute_force_method(n_cp,
+                                          device_per_string + 1,
+                                          cp_loc,
+                                          distance_matrix,
+                                          path_matrix)
+
+            module_logger.debug("Storing solution...")
 
             solutions.append(sol)
 
             # call umbilical design model
             if self.floating:
                 
+                module_logger.debug("Designing umbilical...")
+                
                 umbilical_db_key = components['umbilical']
 
                 # call umbilical design model
                 local_umbilical = UmbilicalDesign(self.meta_data)
-                local_umbilical.umbilical_design(
-                        paths, umbilical_db_key, sol)
+                local_umbilical.umbilical_design(path_matrix,
+                                                 umbilical_db_key,
+                                                 sol)
                 umbilical_design = local_umbilical.designs
 
                 umbilical_impedance = \
                     local_umbilical._umbilical_impedance_table()
 
-                distances, paths = self.update_static_cables(
-                    umbilical_design, paths, sol, distances)
+                distance_matrix, path_matrix = self.update_static_cables(
+                                                            umbilical_design,
+                                                            path_matrix,
+                                                            sol,
+                                                            distance_matrix)
 
             else:
 
                 umbilical_design = None
                 umbilical_impedance = None
+                
+            module_logger.debug("Building network connections...")
 
-            network_connections = \
-                self.convert_to_pypower(sol)
-
-            network_count = self.iterate_cable_solutions(
-                n_cp, cp_loc, network_connections, network_count, components,
-                distances, export_length, export_route, export_voltage,
-                array_voltage, paths, umbilical_design, umbilical_impedance,
-                burial_targets)
+            network_connections = self.convert_to_pypower(sol)
+            network_count = self.iterate_cable_solutions(n_cp,
+                                                         cp_loc,
+                                                         network_connections,
+                                                         network_count,
+                                                         components,
+                                                         distance_matrix,
+                                                         export_length,
+                                                         export_route,
+                                                         export_voltage,
+                                                         array_voltage,
+                                                         path_matrix,
+                                                         umbilical_design,
+                                                         umbilical_impedance,
+                                                         burial_targets)
+            
+        module_logger.debug("Creating outputs...")
 
         min_lcoe = self.check_lcoe()
-        
         network_outputs = self.make_outputs(min_lcoe)
 
         return network_outputs
@@ -1517,47 +1549,54 @@ class RadialNetwork(Optimiser):
             connect_matrix (list): vector of array connections.
 
         '''
-
+        
+        module_logger.debug("Starting brute force method")
+        module_logger.debug("Maximum devices per line is {}".format(max_))
+        
+        n_devices = self.meta_data.array_data.n_devices
+        layout = deepcopy(self.meta_data.array_data.layout)
+        
         # initialise route vector
-        route_vector=[]
-        for n in range(0, self.meta_data.array_data.n_devices):
-            interim=(n+1,0)
+        route_vector = []
+        for n in range(0, n_devices):
+            interim = (n + 1, 0)
             route_vector.append(interim)
 
         #initialise path vector, P
         path_vector = [tuple(reversed(edge)) for edge in route_vector]
 
         if n_cp > 0:
-
-            local_cp = cp_loc
-
-            distance_matrix, path_matrix, devices = (
-                connect.calculate_distance_dijkstra(
-                    self.meta_data.array_data.layout,
-                    self.meta_data.array_data.n_devices,
-                    local_cp,
-                    self.meta_data.grid,
-                    self.meta_data.array_data.layout_grid,
-                    seabed_graph))
+            
+            devices = connect.create_new_for_analysis(
+                                        layout,
+                                        self.meta_data.array_data.layout_grid)
+            
+            module_logger.debug("Creating savings vector...")
 
             savings_vector = connect.calculate_saving_vector(
                                 distance_matrix,
-                                self.meta_data.array_data.n_devices)
+                                n_devices)
 
-            layout = deepcopy(self.meta_data.array_data.layout)
-            layout['Device000'] = local_cp
+            layout['Device000'] = cp_loc
+                  
+            module_logger.debug("Building path...")
 
             connect_matrix = connect.run_this_dijkstra(
-                savings_vector, path_vector, route_vector,
-                self.meta_data.array_data.n_devices, max_, path_matrix,
-                devices, self.meta_data.grid)
+                                        savings_vector,
+                                        path_vector,
+                                        route_vector,
+                                        n_devices,
+                                        max_,
+                                        path_matrix,
+                                        devices,
+                                        self.meta_data.grid)
 
         else:
 
             # Not compatible with ram
             pass
 
-        return connect_matrix, distance_matrix, path_matrix
+        return connect_matrix
 
     def get_string_configurations(self,
                                   layout,
