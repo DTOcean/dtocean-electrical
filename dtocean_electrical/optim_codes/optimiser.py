@@ -338,7 +338,10 @@ class Optimiser(object):
         if 'Radial' in self.meta_data.options.network_configuration:
             # Radial    networks        
             # dimension array
-#            local_cp,_ = self.set_substation_location(device_loc, 1)
+#            local_cp,_ = self.set_substation_location(
+#                                            device_loc,
+#                                            1,
+#                                            self.meta_data.options.edge_buffer)
 #            distance_matrix, _ = connect.calculate_distance_dijkstra(
 #                                        self.meta_data.array_data.layout_grid,
 #                                        local_cp,
@@ -540,15 +543,21 @@ class Optimiser(object):
 
         return distance
 
-    def set_substation_location(self, device_loc, n_cp):
+    def set_substation_location(self, device_loc, n_cp, edge_buffer=None):
 
         '''Some text here.
 
         '''
+        
+        module_logger.debug("Calculating substation location...")
 
         # Need to check shape of array - stacked or not
 
         lease = self.meta_data.grid.lease_boundary
+        
+        if edge_buffer is not None:
+            lease = lease.buffer(-edge_buffer)
+            
         lease_area_ring = LinearRing(list(lease.exterior.coords))
 
         min_x = min(device_loc[:, 0])
@@ -1393,7 +1402,10 @@ class RadialNetwork(Optimiser):
         
         module_logger.debug("Setting substation location...")
 
-        cp_loc, strings = self.set_substation_location(device_loc, n_cp)
+        cp_loc, strings = self.set_substation_location(
+                                            device_loc,
+                                            n_cp,
+                                            self.meta_data.options.edge_buffer)
 
         module_logger.debug("Defining export cable route...")
 
@@ -1932,7 +1944,10 @@ class StarNetwork(Optimiser):
         if substation:
 
             # site substations
-            substation_loc,_ = self.set_substation_location(device_loc, 1)
+            substation_loc,_ = self.set_substation_location(
+                                            device_loc,
+                                            1,
+                                            self.meta_data.options.edge_buffer)
 
             (cp_cp_sol,
              cp_cp_distances,
