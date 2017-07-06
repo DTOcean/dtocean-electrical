@@ -449,10 +449,12 @@ class Grid(object):
         
         all_lines = []
         
+        id_grid_pd = self.grid_pd.set_index("id")
+        
         for edge in edge_id_list:
                         
-            start_row = self.grid_pd.loc[edge[0]]
-            end_row = self.grid_pd.loc[edge[1]]
+            start_row = id_grid_pd.loc[edge[0]]
+            end_row = id_grid_pd.loc[edge[1]]
             
             line = LineString([(start_row["x"], start_row["y"]),
                                (end_row["x"], end_row["y"])])
