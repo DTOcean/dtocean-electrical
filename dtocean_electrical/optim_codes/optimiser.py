@@ -1394,7 +1394,7 @@ class RadialNetwork(Optimiser):
 
     '''
 
-    def run_it(self, installation_tool=None, edge_):
+    def run_it(self, installation_tool=None):
                 
         '''Control logic for designing a radial network.
 
