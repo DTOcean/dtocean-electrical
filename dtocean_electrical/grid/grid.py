@@ -329,6 +329,10 @@ class Grid(object):
 #        # default is to look at all three burial protection levels
 #        final_graphs = self.burial_protection_index(tool_points)
 
+        logMsg = ("Removing {} points containing incompatible soil types for "
+                  "installation technique {}").format(len(points), technique)
+        module_logger.info(logMsg)
+
         updated_graph = self.graph.copy()
         updated_graph.remove_nodes_from(points)
         

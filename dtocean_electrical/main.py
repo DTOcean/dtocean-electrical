@@ -154,6 +154,8 @@ class Electrical(object):
 
                 raise ValueError(errStr)
                 
+            module_logger.info("Setting design limits...")
+                
             # set design limits
             electrical_design.set_design_limits()
 

@@ -298,6 +298,8 @@ class Optimiser(object):
         device_power = self.meta_data.array_data.machine_data.power
         array_power = self.meta_data.array_data.total_power
         device_voltage = self.meta_data.array_data.machine_data.voltage
+        
+        module_logger.debug("Calculating transmission voltages...")
 
         if self.meta_data.options.export_voltage:
 
@@ -635,11 +637,11 @@ class Optimiser(object):
 
         if not interim_estimate_shapely.within(lease):
 
-            interim_estimate = \
-                connect.set_substation_to_edge(
-                    export_line, lease_area_ring,
-                    self.meta_data.site_data.bathymetry,
-                    self.meta_data.grid.lease_boundary)
+            interim_estimate = connect.set_substation_to_edge(
+                                        export_line,
+                                        lease_area_ring,
+                                        self.meta_data.site_data.bathymetry,
+                                        lease)
 
             close = False
 
@@ -677,9 +679,10 @@ class Optimiser(object):
 
                         interim_estimate = \
                             connect.set_substation_to_edge(
-                                export_line, lease_area_ring,
-                                self.meta_data.site_data.bathymetry,
-                                self.meta_data.grid.lease_boundary)
+                                        export_line,
+                                        lease_area_ring,
+                                        self.meta_data.site_data.bathymetry,
+                                        lease)
 
                         close = False
 
@@ -1274,16 +1277,28 @@ class Optimiser(object):
         # if multiple cables, compare solutions - treat array and export as
         # discrete systems
         component_combinations = self.make_cable_solutions(components)
+        
+        logMsg = ("{} component combinations "
+                  "found").format(len(component_combinations))
+        module_logger.debug(logMsg)
 
-        for cable_set in component_combinations:
+        for i, cable_set in enumerate(component_combinations):
+            
+            logMsg = "Evaluating component combination {}".format(i)
+            module_logger.debug(logMsg)
+            module_logger.debug("Creating pypower object...")
 
             py_power_network = self.create_pypower_object(
                 n_cp, network_connections, cable_set,
                 distances, export_length, export_voltage, array_voltage,
                 umbilical_impedance, cp_cp_distances)
 
+            module_logger.debug("Checking cable loadings...")
+
             export_constraints, array_constraints  = self.check_cable_loading(
                     py_power_network, cable_set, export_voltage, array_voltage)
+
+            module_logger.debug("Building network object...")
 
             network = self.create_network_object(
                 network_count, py_power_network, n_cp, cp_loc, cable_set,
@@ -1379,17 +1394,21 @@ class RadialNetwork(Optimiser):
 
     '''
 
-    def run_it(self, installation_tool=None):
+    def run_it(self, installation_tool=None, edge_):
                 
         '''Control logic for designing a radial network.
 
         '''
-        
+                
         seabed_graph = self.select_seabed(installation_tool)
         
         if seabed_graph.size() == 0: raise nx.NetworkXNoPath
+                            
+        module_logger.debug("Defining combos...")
         
         combo_export, combo_array, combo_devices = self.control_simulations()
+
+        module_logger.debug("{} combos defined".format(len(combo_export)))
 
         burial_targets = self.meta_data.grid.grid_pd[['id',
                                                       'Target burial depth']]
@@ -1546,7 +1565,11 @@ class RadialNetwork(Optimiser):
 
         return v_export, v_array, n_devices
 
-    def brute_force_method(self, n_cp, max_, device_loc, cp_loc, seabed_graph):
+    def brute_force_method(self, n_cp,
+                                 max_,
+                                 cp_loc,
+                                 distance_matrix,
+                                 path_matrix):
 
         '''Brute force optimisation of radial network. Iterate through all
         possible combinations of radial networks.
@@ -1987,16 +2010,16 @@ class StarNetwork(Optimiser):
                 for item in self.meta_data.array_data.layout_grid:
 
                     if item[0] == int(key[6:]):
-                        
                         local_devices_grid_id.append((int(key[6:]), item[1]))
             
-
             sorted_local_locs = \
                 sorted(local_devices_grid_id, key=lambda x: x[0])            
             
-            distances, paths,_ = connect.calculate_distance_dijkstra(
-                 local_devices, len(local), cp, self.meta_data.grid,
-                 sorted_local_locs, seabed_graph)
+            distances, paths = connect.calculate_distance_dijkstra(
+                                                         sorted_local_locs,
+                                                         cp,
+                                                         self.meta_data.grid,
+                                                         seabed_graph)
 
             cp_device[idx] = local_temp
 #            cp_device_paths.append(paths[0])
@@ -2113,20 +2136,24 @@ class StarNetwork(Optimiser):
         sorted_cp_locs = sorted(cp_grid_ids, key=lambda x: x[0])
 
         (distance_matrix,
-         path_matrix,
-         cps) = connect.calculate_distance_dijkstra(
-            cp_layout,
-            n_cp,
-            target,
-            self.meta_data.grid,
-            sorted_cp_locs,
-            seabed_graph)
+         path_matrix) = connect.calculate_distance_dijkstra(
+                                                        sorted_cp_locs,
+                                                        target,
+                                                        self.meta_data.grid,
+                                                        seabed_graph)
+        
+        cps = connect.create_new_for_analysis(cp_layout, sorted_cp_locs)
 
         savings_vector = connect.calculate_saving_vector(distance_matrix, n_cp)
 
-        connect_matrix = connect.run_this_dijkstra(
-            savings_vector, path_vector, route_vector, n_cp, max_, path_matrix,
-            cps, self.meta_data.grid)
+        connect_matrix = connect.run_this_dijkstra(savings_vector,
+                                                   path_vector,
+                                                   route_vector,
+                                                   n_cp,
+                                                   max_,
+                                                   path_matrix,
+                                                   cps,
+                                                   self.meta_data.grid)
 
         return connect_matrix, distance_matrix, path_matrix
 
