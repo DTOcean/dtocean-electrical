@@ -16,7 +16,8 @@ from dtocean_electrical.grid.grid_processing import (clip_grid,
                                                      get_neighbours_gradient,
                                                      make_graph,
                                                      make_gradient_dict,
-                                                     make_grid)
+                                                     make_grid,
+                                                     make_grid_arrays)
     
 
 def test_clip_grid(lease, export):
@@ -81,7 +82,16 @@ def test_get_metric_edges():
                  'layer 1 start': [0., 0., 0., 0., 0., 0., 0., 0.]}
     
     grid_df = pd.DataFrame(grid_dict)
-    point_ids, metrics = get_metric_edges(4, grid_df, edge_length)
+    id_indexed_grid_df = grid_df.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df)
+    
+    point_ids, metrics = get_metric_edges(4,
+                                          id_indexed_grid_df,
+                                          id_array,
+                                          x_array,
+                                          y_array,
+                                          z_array,
+                                          edge_length)
     
     assert len(point_ids) == len(metrics)
     assert set(point_ids) == set([0, 1, 2, 3, 5, 6, 7])
@@ -111,7 +121,16 @@ def test_get_metric_weights():
                  'layer 1 start': [0., 0., 0., 0., 0., 0., 0., 0.]}
     
     grid_df = pd.DataFrame(grid_dict)
-    result = get_metric_weights(4, grid_df, edge_length)
+    id_indexed_grid_df = grid_df.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df)
+    
+    result = get_metric_weights(4,
+                                id_indexed_grid_df,
+                                id_array,
+                                x_array,
+                                y_array,
+                                z_array,
+                                edge_length)
     
     indices = [0, 2, 6, 1, 3, 5, 7]
     metrics = [np.sqrt(2), np.sqrt(2), np.sqrt(2), 1.0, 1.0, 1.0, 1.0]
@@ -132,7 +151,15 @@ def test_get_neighbours_distance():
                  'layer 1 start': [0., 0., 0., 0., 0., 0., 0., 0.]}
     
     grid_df = pd.DataFrame(grid_dict)
-    result = get_neighbours_distance(grid_df)
+    id_indexed_grid_df = grid_df.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df)
+    
+    result = get_neighbours_distance(grid_df,
+                                     id_indexed_grid_df,
+                                     id_array,
+                                     x_array,
+                                     y_array,
+                                     z_array)
     
     assert 4 in result
     
@@ -167,7 +194,16 @@ def test_add_overlap_edges():
                     "id_y": [100]}
     
     grid_df = pd.DataFrame(grid_dict)
-    grid_dict = get_neighbours_distance(grid_df)
+    id_indexed_grid_df = grid_df.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df)
+    
+    grid_dict = get_neighbours_distance(grid_df,
+                                        id_indexed_grid_df,
+                                        id_array,
+                                        x_array,
+                                        y_array,
+                                        z_array)
+    
     overlap_df = pd.DataFrame(overlap_dict)
     
     pre_length = len(grid_dict[0])
@@ -188,7 +224,15 @@ def test_get_neighbours_gradient():
                  'layer 1 start': [0., 0., 0., 0., 1., 0., 0., 0.]}
     
     grid_df = pd.DataFrame(grid_dict)
-    result = get_neighbours_gradient(grid_df)
+    id_indexed_grid_df = grid_df.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df)
+    
+    result = get_neighbours_gradient(grid_df,
+                                     id_indexed_grid_df,
+                                     id_array,
+                                     x_array,
+                                     y_array,
+                                     z_array)
     
     angle_rad = np.arctan(1. / np.sqrt(2))
     angle_deg = np.degrees(angle_rad)
