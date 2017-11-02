@@ -117,20 +117,23 @@ class Umbilical(object):
             compblocks = ['hang off']
         umbprops = [0 for row in range(len(compblocks))]
         umbwetmass = [0 for row in range(len(compblocks))]
+        umbconpt_rotated = [0 for row in range(0, 2)]
         umbtopconn = [0 for row in range(0, 3)]
-        """ Global position of umbilical top connection """
-        umbtopconn[0] = round((self._variables.umbconpt[0] + syspos[0]) * math.cos(
-                                    - self._variables.sysorienang * math.pi / 180.0)
-                                    - (self._variables.umbconpt[1] + syspos[1])
-                                    * math.sin(- self._variables.sysorienang 
-                                    * math.pi / 180.0),3)
-        umbtopconn[1] = round((self._variables.umbconpt[0] + syspos[0]) * math.sin(
-                                    - self._variables.sysorienang * math.pi / 180.0)
-                                    + (self._variables.umbconpt[1] + syspos[1])
-                                    * math.cos(- self._variables.sysorienang 
-                                    * math.pi / 180.0),3)
+        angle_rads = -self._variables.sysorienang * math.pi / 180.0
+        pre_rotated = self._variables.umbconpt[:2]
+        
+        # Rotate the connection point
+        umbconpt_rotated[0] = pre_rotated[0] * math.cos(angle_rads) - \
+                                      pre_rotated[1] * math.sin(angle_rads)
+        umbconpt_rotated[1] = pre_rotated[0] * math.sin(angle_rads) + \
+                                      pre_rotated[1] * math.cos(angle_rads)
+        
+        # Move the connection point to global coordinates
+        umbtopconn[0] = round(umbconpt_rotated[0] + syspos[0], 3)
+        umbtopconn[1] = round(umbconpt_rotated[1] + syspos[1], 3)
+        
         if self._variables.systype in ("wavefloat","tidefloat"):  
-            umbtopconn[2] = self._variables.umbconpt[2] - (syspos[2] - self._variables.sysdraft)  
+            umbtopconn[2] = self._variables.umbconpt[2] - self._variables.sysdraft 
             klim = 1
         elif self._variables.systype in ("wavefixed","tidefixed"):
             umbtopconn[2] = self._variables.umbconpt[2]
