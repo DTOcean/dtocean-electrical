@@ -256,26 +256,27 @@ def dijkstra(graph, a, b, grid=None):
             source_node = id_grid_pd.loc[a]
             target_node = id_grid_pd.loc[b]
             logMsg = ("Point ({}, {}) not reachable from point "
-                      "({}, {})").format(target_node["x"],
-                                         target_node["y"],
-                                         source_node["x"],
-                                         source_node["y"])
+                      "({}, {}), with node numbers {} and {}").format(
+                                                          target_node["x"],
+                                                          target_node["y"],
+                                                          source_node["x"],
+                                                          source_node["y"],
+                                                          b,
+                                                          a)
                     
         module_logger.debug(logMsg)
         
         return
-
-    # For efficiency copy source from networkx
-    (lengths, paths) = nx.single_source_dijkstra(graph, a, b)
     
+    if not graph.has_node(a):
+        raise nx.NetworkXNoPath("node {} not in graph".format(a))
+
     try:
-        path = paths[b]
-    except KeyError:
+        length, path = nx.single_source_dijkstra(graph, a, b)
+    except nx.NetworkXNoPath:
         if grid is not None: log_error()
         raise nx.NetworkXNoPath("node {} not reachable from {}".format(b, a))
-            
-    length = lengths[b]
-    
+
     return length, path
 
 
