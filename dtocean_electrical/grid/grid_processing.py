@@ -569,4 +569,3 @@ def make_grid_arrays(grid_df):
         z_array[idx, jdx] = row.depth
         
     return id_array, x_array, y_array, z_array
-    

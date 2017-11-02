@@ -133,7 +133,8 @@ class Umbilical(object):
         umbtopconn[1] = round(umbconpt_rotated[1] + syspos[1], 3)
         
         if self._variables.systype in ("wavefloat","tidefloat"):  
-            umbtopconn[2] = self._variables.umbconpt[2] - self._variables.sysdraft 
+            umbtopconn[2] = self._variables.umbconpt[2] - \
+                                                    self._variables.sysdraft
             klim = 1
         elif self._variables.systype in ("wavefixed","tidefixed"):
             umbtopconn[2] = self._variables.umbconpt[2]
