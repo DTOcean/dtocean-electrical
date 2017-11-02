@@ -143,10 +143,26 @@ def make_graph(grid_df_static, grid_df_clipped):
     '''
 
     module_logger.info("Calculating lease area distances...")
-    graph_dict_static = get_neighbours_distance(grid_df_static)
 
+    id_indexed_grid_df = grid_df_static.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df_static)
+    graph_dict_static = get_neighbours_distance(grid_df_static,
+                                                id_indexed_grid_df,
+                                                id_array,
+                                                x_array,
+                                                y_array,
+                                                z_array)
+    
     module_logger.info("Calculating cable corridor distances...")
-    graph_dict_clipped = get_neighbours_distance(grid_df_clipped)
+
+    id_indexed_grid_df = grid_df_clipped.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df_clipped)
+    graph_dict_clipped = get_neighbours_distance(grid_df_clipped,
+                                                 id_indexed_grid_df,
+                                                 id_array,
+                                                 x_array,
+                                                 y_array,
+                                                 z_array)
     
     assert (set(graph_dict_static.keys()) &
             set(graph_dict_clipped.keys())) == set()
@@ -184,12 +200,28 @@ def make_gradient_dict(grid_df_static, grid_df_clipped):
     '''Creates NetworkX graph input dictionary for gradients over the two
     grids.
     '''
+    
+    id_indexed_grid_df = grid_df_static.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df_static)
 
     module_logger.info("Calculating lease area gradients...")
-    graph_dict_static = get_neighbours_gradient(grid_df_static)
+    graph_dict_static = get_neighbours_gradient(grid_df_static,
+                                                id_indexed_grid_df,
+                                                id_array,
+                                                x_array,
+                                                y_array,
+                                                z_array)
+    
+    id_indexed_grid_df = grid_df_clipped.set_index("id")
+    id_array, x_array, y_array, z_array = make_grid_arrays(grid_df_clipped)
 
     module_logger.info("Calculating cable corridor gradients...")
-    graph_dict_clipped = get_neighbours_gradient(grid_df_clipped)
+    graph_dict_clipped = get_neighbours_gradient(grid_df_clipped,
+                                                 id_indexed_grid_df,
+                                                 id_array,
+                                                 x_array,
+                                                 y_array,
+                                                 z_array)
     
     assert (set(graph_dict_static.keys()) &
             set(graph_dict_clipped.keys())) == set()
@@ -223,7 +255,12 @@ def make_grid(grid_df_static,
     return grid
 
 
-def get_neighbours_distance(grid_df):
+def get_neighbours_distance(grid_df,
+                            id_indexed_grid_df,
+                            id_array,
+                            x_array,
+                            y_array,
+                            z_array):
 
     '''Get distance between neighbouring points for all points defined in
     grid_df.
@@ -234,14 +271,23 @@ def get_neighbours_distance(grid_df):
     '''
 
     edge_weights = {point.id: get_metric_weights(point.id,
-                                                 grid_df,
+                                                 id_indexed_grid_df,
+                                                 id_array,
+                                                 x_array,
+                                                 y_array,
+                                                 z_array,
                                                  edge_length)
                                             for _, point in grid_df.iterrows()}
 
     return edge_weights
 
 
-def get_neighbours_gradient(grid_df):
+def get_neighbours_gradient(grid_df,
+                            id_indexed_grid_df,
+                            id_array,
+                            x_array,
+                            y_array,
+                            z_array):
 
     '''Get gradient between neighbouring points for all points defined in
     grid_dict.
@@ -259,7 +305,11 @@ def get_neighbours_gradient(grid_df):
     '''
 
     edge_gradients = {point.id: get_metric_weights(point.id,
-                                                   grid_df,
+                                                   id_indexed_grid_df,
+                                                   id_array,
+                                                   x_array,
+                                                   y_array,
+                                                   z_array,
                                                    gradient)
                                             for _, point in grid_df.iterrows()}
 
@@ -365,27 +415,43 @@ def apply_equipment_constraints(grid,
     return valid_installers
 
 
-def get_metric_weights(index, grid_df, metric):
+def get_metric_weights(index,
+                       id_indexed_grid_df,
+                       id_array,
+                       x_array,
+                       y_array,
+                       z_array,
+                       metric):
     
-    point_ids, metrics = get_metric_edges(index, grid_df, metric)
+    point_ids, metrics = get_metric_edges(index,
+                                          id_indexed_grid_df,
+                                          id_array,
+                                          x_array,
+                                          y_array,
+                                          z_array,
+                                          metric)
     metrics_weights = weights_from_metrics(point_ids, metrics)
 
     return metrics_weights
 
 
-def get_metric_edges(index, grid_df, metric):
+def get_metric_edges(index,
+                     id_indexed_grid_df,
+                     id_array,
+                     x_array,
+                     y_array,
+                     z_array,
+                     metric):
 
     '''Find metric along edges to neighbours of point defined by index.
 
     Args:
         index (tuple) [-]: id of point under consideration.
-        grid_df (pd.DataFrame) [-]: Grid represented as dataframe
+        id_indexed_grid_df (pd.DataFrame) [-]: Grid indexed by id
+        ij_indexed_grid_df (pd.DataFrame) [-]: Grid indexed by i, j indices
         metric (function): metric to apply between points
 
     '''
-    
-    id_indexed_grid_df = grid_df.set_index("id")
-    ij_indexed_grid_df = grid_df.set_index(['i', 'j'])
 
     id_point = id_indexed_grid_df.loc[index]
     id_point_coords = (id_point.x, id_point.y, id_point['layer 1 start'])
@@ -400,17 +466,21 @@ def get_metric_edges(index, grid_df, metric):
     point_ids = []
     
     for i, j in search_ij:
-
-        if (i, j) in ij_indexed_grid_df.index:
-
-            ij_point = ij_indexed_grid_df.loc[i, j]
-            ij_point_coords = (ij_point.x,
-                               ij_point.y,
-                               ij_point['layer 1 start'])
-            ij_metric = metric(id_point_coords, ij_point_coords)
-
-            point_ids.append(int(ij_point.id))
-            metrics.append(ij_metric)
+        
+        if i < 0 or j < 0: continue
+        
+        point_id = id_array[i, j]
+        
+        if np.isnan(point_id): continue
+            
+        ij_point_coords = (x_array[i, j],
+                           y_array[i, j],
+                           z_array[i, j])
+        
+        ij_metric = metric(id_point_coords, ij_point_coords)
+        
+        point_ids.append(int(point_id))
+        metrics.append(ij_metric)
             
     return point_ids, metrics
 
@@ -474,3 +544,29 @@ def gradient(p1, p2):
     angle = np.arctan(delta_z / horizontal_distance)
 
     return abs(np.degrees(angle))
+
+
+def make_grid_arrays(grid_df):
+    
+    grid_df = grid_df.rename(columns={'layer 1 start': 'depth'})
+    
+    i_dim = grid_df.i.max() + 2
+    j_dim = grid_df.j.max() + 2
+    
+    id_array = np.ones((i_dim, j_dim)) * np.nan
+    x_array = np.ones((i_dim, j_dim)) * np.nan
+    y_array = np.ones((i_dim, j_dim)) * np.nan
+    z_array = np.ones((i_dim, j_dim)) * np.nan
+    
+    for row in grid_df.itertuples():
+        
+        idx = row.i
+        jdx = row.j
+        
+        id_array[idx, jdx] = row.id
+        x_array[idx, jdx] = row.x
+        y_array[idx, jdx] = row.y
+        z_array[idx, jdx] = row.depth
+        
+    return id_array, x_array, y_array, z_array
+    
