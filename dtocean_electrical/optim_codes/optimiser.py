@@ -2401,23 +2401,26 @@ class UmbilicalDesign(object):
         initial_guess = 1.5
 
         connect = [item for item in sol if device in item][0]
-        downstream = connect.index(device)-1
-        line = LineString(
-            self._make_shapely_point_list(path[connect[downstream]][device]))
-
-        termination_approximation = (
-            line.interpolate(
-                self.meta_data.site_data.min_water_depth*initial_guess))
+        downstream = connect.index(device) - 1
+        
+        line_path = path[connect[downstream]][device]
+        points = self._make_shapely_point_list(line_path)
+        
+        if len(points) > 1:
+            
+            line = LineString(points)
+            depth = self.meta_data.site_data.min_water_depth * initial_guess
+            termination_approximation = line.interpolate(depth)
+            
+        else:
+            
+            termination_approximation = points[0]
 
         x, y = zip(*[(self.meta_data.grid.points[point].x,
                       self.meta_data.grid.points[point].y)
-                     for point
-                     in path[connect[downstream]][device]])
-
-        grid = np.array(self.meta_data.grid.grid_pd[['x', 'y']])
+                                                     for point in line_path])
 
         grid_to_search = np.array([x, y]).T
-
         point_to_check = (termination_approximation.x,
                           termination_approximation.y)
 
