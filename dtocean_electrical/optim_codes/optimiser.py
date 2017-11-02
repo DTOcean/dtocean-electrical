@@ -1232,10 +1232,10 @@ class Optimiser(object):
 
             for i, point in enumerate(new_array_path[:-1]):
 
-                point2 = new_array_path[i+1]
+                point2 = new_array_path[i + 1]
 
                 new_distance += (
-                    grid.graph.get_edge_data(point,point2)['weight'])
+                    grid.graph.get_edge_data(point, point2)['weight'])
             
             if network_type == 'Star':
                 
