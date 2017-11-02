@@ -1253,15 +1253,27 @@ class Optimiser(object):
 
                     if len(d_id) > (local_id + 1):
 
-                        next_path = list(paths[device][d_id[local_id+1]])
+                        next_path = list(paths[device][d_id[local_id + 1]])
+                        start_idx = umbilical_path.index(grid_point) + 1
+                        path_linked = False
 
-                        for item in \
-                        reversed(umbilical_path[
-                        umbilical_path.index(grid_point)+1:]):
+                        for item in reversed(umbilical_path[start_idx:]):
 
-                            if item not in next_path:
-
+                            if item in next_path: break
+                                
+                            if path_linked:
+                                
                                 next_path.insert(0, item)
+                                
+                            else:
+                                
+                                _, link_path = connect.dijkstra(
+                                                            grid.graph,
+                                                            item,
+                                                            next_path[0])
+                                
+                                next_path = link_path[:-1] + next_path
+                                path_linked = True
 
                         paths[device][d_id[local_id+1]] = tuple(next_path)
 
