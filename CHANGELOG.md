@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   selected tool's graph.
 - Made calls to Dijkstra's shortest path algorithm more efficient for radial
   networks.
+- Accelerated grid distance and gradient processing by converting parts of the
+  grid DataFrame to numpy arrays and reorganising other DataFrame manipulation.
+- Changed networkx single_source_dijkstra function call to match 2.0 API.
   
 ### Fixed
 
@@ -39,6 +42,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Ensure all Grid attributes are referenced by the point "id".
 - Fixed Network make_cable_routes so that cable points are returned in the
   correct order.
+- Improved algorithm for determining the grid spacing.
+- Ensured that umbilical cable paths are correctly joined to the inter-arrays
+  cables.
+- Fixed approximation of umbilical cable termination point when path only has
+  one point.
+- Fixed umbilical cable length calculation by changing device rotation frame
+  from global to local coordinates.
 
 ### Removed
 
