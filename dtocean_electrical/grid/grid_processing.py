@@ -118,8 +118,12 @@ def clip_grid(grid_df_static, grid_df_to_clip):
             raise RuntimeError(errStr)
         
         # Get maximum grid_df_to_clip spacing
-        dx = np.abs(grid_df_to_clip.x[1] - grid_df_to_clip.x[0])
-        dy = np.abs(grid_df_to_clip.y[1] - grid_df_to_clip.y[0])
+        x_unique = sorted(set(grid_df_to_clip.x))
+        y_unique = sorted(set(grid_df_to_clip.y))
+        
+        dx = x_unique[1] - x_unique[0]
+        dy = y_unique[1] - y_unique[0]
+        
         maxd = max(dx, dy)
         
         # Reduce the static_grid polygon
