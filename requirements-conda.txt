@@ -3,7 +3,7 @@
 # INSTALLATION REQUIRED DEPENDENCIES
 descartes
 matplotlib
-networkx
+networkx >=2.0
 numpy
 pandas
 polite >=0.9
