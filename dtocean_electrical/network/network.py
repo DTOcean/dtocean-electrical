@@ -1714,17 +1714,21 @@ class Network(object):
             annual_yield (float):  Array power output for a year period with
                 electrical losses.
 
-        Note:
-            The 1000000 is to convert from W to MW.
-
         '''
 
-        year_hours = 365*24
+        year_hours = 365 * 24
         annual_yield = 0
 
         for time, power in zip(self.power_histogram,
                                self.array_power_output):
-            annual_yield += time*year_hours*abs(power*1000000)
+            
+            # Convert from MW to W and ignore directionality
+            power_w = abs(power * 1e6)
+
+            annual_yield += time * year_hours * power_w
+        
+        # Correct for bad calculations
+        if np.isnan(annual_yield): annual_yield = 0.
 
         return annual_yield
 
