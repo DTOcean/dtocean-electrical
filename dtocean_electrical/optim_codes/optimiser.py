@@ -1081,6 +1081,7 @@ class Optimiser(object):
                 self.meta_data.array_data.onshore_infrastructure_cost)
 
         network.total_network_cost()
+        network.calculate_lcoe()
 
         return network
         
@@ -1147,22 +1148,28 @@ class Optimiser(object):
 
         for network in order:
 
-            if ((self.networks[network].array_constraints.flag is False) and
-                    (self.networks[network].export_constraints.flag is False)):
+            if (self.networks[network].array_constraints.flag is False and
+                self.networks[network].export_constraints.flag is False and
+                np.isfinite(self.networks[network].lcoe)):
 
                 # valid solution found
                 solution = True
 
                 break
+            
+            else:
+                
+                msgStr = ("Invalid solution detected: Export constraint flag: "
+                          "{}; Array constraint flag: {}; LCOE {}").format(
+                            self.networks[network].export_constraints.flag,
+                            self.networks[network].array_constraints.flag,
+                            self.networks[network].lcoe)
+                module_logger.warning(msgStr)
 
         if not solution:
 
             errStr = ("Could not find valid solution for given database and "
-                      "options. Export constraint: {}. "
-                      "Array constraint:  {}").format(
-                            self.networks[network].export_constraints.flag,
-                            self.networks[network].array_constraints.flag)
-
+                      "options.")
             raise ValueError(errStr)
 
         return network
@@ -1338,7 +1345,6 @@ class Optimiser(object):
 
             module_logger.debug("Building network object...")
 
-            self.lcoe.append(network.total_cost)
             network = self.create_network_object(network_count,
                                                  py_power_network,
                                                  n_cp, cp_loc,
@@ -1354,6 +1360,7 @@ class Optimiser(object):
                                                  cp_cp_paths,
                                                  cp_cp_distances)
 
+            self.lcoe.append(network.lcoe)
             self.networks.append(network)
 
         network_count += 1
