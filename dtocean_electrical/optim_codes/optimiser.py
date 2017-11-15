@@ -1000,11 +1000,21 @@ class Optimiser(object):
 
         return pypower_network
 
-    def create_network_object(
-        self, network_count, py_power_network, n_cp, cp_loc, components,
-        distances, paths, export_route, export_length, umbilical_design,
-        burial_targets, export_constraints, array_constraints,
-        cp_cp_paths = None, cp_cp_distances = None):
+    def create_network_object(self, network_count,
+                                    py_power_network,
+                                    n_cp,
+                                    cp_loc,
+                                    components,
+                                    distances,
+                                    paths,
+                                    export_route,
+                                    export_length,
+                                    umbilical_design,
+                                    burial_targets,
+                                    export_constraints,
+                                    array_constraints,
+                                    cp_cp_paths=None,
+                                    cp_cp_distances=None):
 
         '''Some text here.
 
@@ -1014,55 +1024,61 @@ class Optimiser(object):
             self.meta_data.options.network_configuration[0]
 
         # create network object to carry this information
-        network = Network(
-            network_count,
-            network_type,                                           
-            self.meta_data.array_data.array_output,
-            py_power_network.onshore_active_power,
-            self.floating,
-            True,
-             export_constraints, array_constraints,
-            )
+        network = Network(network_count,
+                          network_type,                                           
+                          self.meta_data.array_data.array_output,
+                          py_power_network.onshore_active_power,
+                          self.floating,
+                          True,
+                          export_constraints,
+                          array_constraints)
+        
+        cps = self.meta_data.database.collection_points
     
         if network_type == 'Star':
             
-            network.add_collection_point(n_cp, cp_loc, components['cp'],
-                self.meta_data.database.collection_points)
+            network.add_collection_point(n_cp,
+                                         cp_loc,
+                                         components['cp'],
+                                         cps)
         
         else:
             
-            network.add_collection_point(n_cp, [cp_loc], components['cp'],
-                self.meta_data.database.collection_points)
+            network.add_collection_point(n_cp,
+                                         [cp_loc],
+                                         components['cp'],
+                                         cps)
 
         network.shore_to_device = (py_power_network.shore_to_device)
     
-        network.device_to_device = (
-            py_power_network.device_to_device)
+        network.device_to_device = py_power_network.device_to_device
         network.cp_to_cp = py_power_network.cp_to_cp
         network.cp_to_device = py_power_network.cp_to_device
         network.shore_to_cp = py_power_network.shore_to_cp
+        
         network.add_cables_cp_three(
-            distances,
-            cp_cp_distances,
-            self.meta_data.array_data.machine_data.connection, 
-            self.meta_data.array_data.layout,
-            paths,
-            cp_cp_paths,
-            export_route,
-            export_length,
-            umbilical_design,
-            components,
-            burial_targets,
-            self.meta_data.options.target_burial_depth_array,
-            self.meta_data.options.target_burial_depth_export)
+                distances,
+                cp_cp_distances,
+                self.meta_data.array_data.machine_data.connection, 
+                self.meta_data.array_data.layout,
+                paths,
+                cp_cp_paths,
+                export_route,
+                export_length,
+                umbilical_design,
+                components,
+                burial_targets,
+                self.meta_data.options.target_burial_depth_array,
+                self.meta_data.options.target_burial_depth_export)
 
         network.calculate_power_quantities(
-            self.meta_data.array_data.ideal_annual_yield,
-            self.meta_data.array_data.ideal_histogram)
+                self.meta_data.array_data.ideal_annual_yield,
+                self.meta_data.array_data.ideal_histogram)
 
         network.make_bom()
-        network.set_economics_data(self.meta_data.database,
-            self.meta_data.array_data.onshore_infrastructure_cost)
+        network.set_economics_data(
+                self.meta_data.database,
+                self.meta_data.array_data.onshore_infrastructure_cost)
 
         network.total_network_cost()
 
@@ -1279,12 +1295,22 @@ class Optimiser(object):
 
         return distances, paths
         
-    def iterate_cable_solutions(self, n_cp, cp_loc, network_connections,
-                                network_count, components, distances,
-                                export_length, export_route, export_voltage,
-                                array_voltage, paths, umbilical_design,
-                                umbilical_impedance, burial_targets,
-                                cp_cp_distances = None, cp_cp_paths = None):
+    def iterate_cable_solutions(self, n_cp,
+                                      cp_loc,
+                                      network_connections,
+                                      network_count,
+                                      components,
+                                      distances,
+                                      export_length,
+                                      export_route,
+                                      export_voltage,
+                                      array_voltage,
+                                      paths,
+                                      umbilical_design,
+                                      umbilical_impedance,
+                                      burial_targets,
+                                      cp_cp_distances=None,
+                                      cp_cp_paths=None):
 
         # if multiple cables, compare solutions - treat array and export as
         # discrete systems
@@ -1312,13 +1338,22 @@ class Optimiser(object):
 
             module_logger.debug("Building network object...")
 
-            network = self.create_network_object(
-                network_count, py_power_network, n_cp, cp_loc, cable_set,
-                distances, paths, export_route, export_length,
-                umbilical_design, burial_targets, export_constraints,
-                array_constraints, cp_cp_paths, cp_cp_distances)
-
             self.lcoe.append(network.total_cost)
+            network = self.create_network_object(network_count,
+                                                 py_power_network,
+                                                 n_cp, cp_loc,
+                                                 cable_set,
+                                                 distances,
+                                                 paths,
+                                                 export_route,
+                                                 export_length,
+                                                 umbilical_design,
+                                                 burial_targets,
+                                                 export_constraints,
+                                                 array_constraints,
+                                                 cp_cp_paths,
+                                                 cp_cp_distances)
+
             self.networks.append(network)
 
         network_count += 1
