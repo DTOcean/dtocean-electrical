@@ -185,6 +185,7 @@ class Network(object):
         self.b_o_m = None
         self.economics_data = None
         self.total_cost = None
+        self.lcoe = None
         self.all_connections = None
         self.hierarchy = None
         self.network_design = None
@@ -1783,6 +1784,20 @@ class Network(object):
                                 zip(self.array_power_output, ideal_histogram)]
 
         return histogram_efficiency
+    
+    def calculate_lcoe(self):
+
+        '''Simplified LCOE for comparison of electrical networks.
+        '''
+        
+        if self.annual_yield == 0.:
+            self.lcoe = np.inf
+        else:
+            self.lcoe = self.total_cost / self.annual_yield * 1e3
+            
+        module_logger.debug("LCOE: {}".format(self.lcoe))
+
+        return
 
     def make_umbilical_table(self):
 
