@@ -30,9 +30,9 @@ class Network(object):
         index (int) [-]: Unique index of the instance of the Network object.
         configuration (str) [-]: The network configuration, defined as either:
             radial or star.
-        seastate_occurrence (list) [pc]: The probability of occurrence of each
-            bin of seastates in the power histogram.
-        array_power_output (list) [MW]: The array power outpuy for each for
+        power_histogram (list) [pc]: The probability of occurrence of each
+            power bin.
+        array_power_output (list) [MW]: The array power output for each for
             each bin edge in the power histogram.
 
     Attributes:
@@ -144,7 +144,7 @@ class Network(object):
     def __init__(self,
                  index,
                  configuration,
-                 seastate_occurrence,
+                 power_histogram,
                  array_power_output,
                  floating,
                  substation,
@@ -175,7 +175,7 @@ class Network(object):
         self.dry_mate = []
 
         # assessment states
-        self.seastate_occurrence = seastate_occurrence
+        self.power_histogram = power_histogram
         self.array_power_output = array_power_output
 
         self.array_constraints = array_constraints
@@ -1721,7 +1721,7 @@ class Network(object):
         year_hours = 365*24
         annual_yield = 0
 
-        for time, power in zip(self.seastate_occurrence,
+        for time, power in zip(self.power_histogram,
                                self.array_power_output):
             annual_yield += time*year_hours*abs(power*1000000)
 
