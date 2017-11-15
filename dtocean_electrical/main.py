@@ -166,7 +166,7 @@ class Electrical(object):
                 try:
 
                     msg = ("Checking cable routes for installation"
-                           " tool: {}.".format(self.options.installation_tool))
+                           " tool: {}".format(self.options.installation_tool))
                     module_logger.info(msg)
 
                     result = electrical_design.run_it(
@@ -174,7 +174,7 @@ class Electrical(object):
 
                     best_tool = self.options.installation_tool
 
-                    msg = ("Solution found for installation tool: {}.".format(
+                    msg = ("Solution found for installation tool: {}".format(
                            self.options.installation_tool))
                     module_logger.info(msg)
 
@@ -282,7 +282,7 @@ class Electrical(object):
         for tool in tools:
 
             msg = ("Checking cable routes for installation"
-                       " tool: {}.".format(tool))
+                   " tool: {}".format(tool))
             module_logger.info(msg)
 
             try:
@@ -291,7 +291,7 @@ class Electrical(object):
                 solution_found = True
 
                 msg = ("Solution found for installation tool: "
-                       "{}.".format(tool))
+                       "{}".format(tool))
                 module_logger.info(msg)
 
                 all_solutions_data[tool] = tool_result
