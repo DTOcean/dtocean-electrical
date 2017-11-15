@@ -287,11 +287,19 @@ class Network(object):
 
         return
 
-    def add_cables_cp_three(self, cp_device_distance, cp_cp_distance,
-                            device_connection, device_layout,
-                            cp_device_paths, cp_cp_paths, export_route,
-                            export_length, umbilical_data, components,
-                            burial_depths, burial_array, burial_export):
+    def add_cables_cp_three(self, cp_device_distance,
+                                  cp_cp_distance,
+                                  device_connection,
+                                  device_layout,
+                                  cp_device_paths,
+                                  cp_cp_paths,
+                                  export_route,
+                                  export_length,
+                                  umbilical_data,
+                                  components,
+                                  burial_depths,
+                                  burial_array,
+                                  burial_export):
 
         '''Add cables to the network.  This also adds connectors at cable ends.
         This also produces the hierarchy and network design dictionaries.
@@ -1502,29 +1510,6 @@ class Network(object):
 
         return
 
-    def calculate_lcoe(self):
-
-        '''Simplified LCOE for comparison of electrical networks.
-
-        Args:
-            arguments (type): Description.
-
-        Attributes:
-            attributes (type): Description.
-
-        Returns:
-            returns (type): Description.
-
-        Note:
-            To be activated.
-
-        '''
-
-        # network performance divided by total network cost
-        # return the lcoe of the network
-
-        pass
-
     def make_cable_routes(self, grid, all_x, all_y):
 
         '''Collect the cable routes in pd.DataFrame for downstream analysis.
@@ -1560,19 +1545,17 @@ class Network(object):
         cable_depth = indexed_grid.lookup(grid_id, depth_cols)
         cable_type = indexed_grid.lookup(grid_id, type_cols)
 
-        cable_dict = {"db ref": db_ref,
-                      "marker": marker,
-                      "x": cable_x,
-                      "y": cable_y,
+        cable_dict = {"marker": marker,
+                      "db ref": db_ref,
                       "burial_depth":  burial_depth,
                       "split pipe": split_pipe,
+                      "x": cable_x,
+                      "y": cable_y,
                       'layer 1 start': cable_depth,
                       'layer 1 type': cable_type
                       }
-
-        cable_route_data = pd.DataFrame(cable_dict)
                 
-        self.cable_routes = cable_route_data
+        self.cable_routes = pd.DataFrame(cable_dict)
 
         return
 
@@ -1698,11 +1681,11 @@ class Network(object):
 
         self.annual_yield = self.calculate_annual_yield()
         self.annual_losses = self.calculate_annual_losses(ideal_yield)
-        self.annual_efficiency = self.annual_yield/ideal_yield
+        self.annual_efficiency = self.annual_yield / ideal_yield
         self.histogram_losses = self.calculate_histogram_losses(
-            ideal_histogram)
+                                                            ideal_histogram)
         self.histogram_efficiency = self.calculate_histogram_efficiency(
-            ideal_histogram)
+                                                            ideal_histogram)
 
         return
 
