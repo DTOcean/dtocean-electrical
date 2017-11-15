@@ -238,6 +238,11 @@ class Grid(object):
             for delp in excluded_points:
                 self.points.pop(delp, None)
                 
+            # Remove from lists
+            self.all_ids = self.all_ids.drop(excluded_points)
+            self.all_x = self.all_x.drop(excluded_points)
+            self.all_y = self.all_y.drop(excluded_points)
+                            
             msg = ("Number of points removed in exclusion zones: {}".format(
                    len(excluded_points)))
             module_logger.info(msg)
