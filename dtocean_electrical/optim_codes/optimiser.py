@@ -1497,18 +1497,24 @@ class RadialNetwork(Optimiser):
                                     cp_loc,
                                     self.meta_data.grid,
                                     seabed_graph)
-
+            
+        local_umbilical = UmbilicalDesign(self.meta_data)
+        
         for i, simulation in enumerate(zip(combo_export,
                                            combo_array,
                                            combo_devices)):
             
             module_logger.info("Evaluating network combination {} of "
                                "{}".format(i, n_combos))
+            
+            # Copy the distance and path matrices
+            sim_distance_matrix = deepcopy(distance_matrix)
+            sim_path_matrix = deepcopy(path_matrix)
+
             export_voltage = simulation[0]
             array_voltage = simulation[1]
             device_per_string = simulation[2]
             
-            module_logger.debug("Evaluating simulation: {} ".format(i))
             module_logger.debug("Selecting components")
 
             components = self.db_compatibility(
@@ -1521,8 +1527,8 @@ class RadialNetwork(Optimiser):
             sol = self.brute_force_method(n_cp,
                                           device_per_string + 1,
                                           cp_loc,
-                                          distance_matrix,
-                                          path_matrix)
+                                          sim_distance_matrix,
+                                          sim_path_matrix)
 
             module_logger.debug("Storing solution...")
 
@@ -1536,8 +1542,7 @@ class RadialNetwork(Optimiser):
                 umbilical_db_key = components['umbilical']
 
                 # call umbilical design model
-                local_umbilical = UmbilicalDesign(self.meta_data)
-                local_umbilical.umbilical_design(path_matrix,
+                local_umbilical.umbilical_design(sim_path_matrix,
                                                  umbilical_db_key,
                                                  sol)
                 umbilical_design = local_umbilical.designs
@@ -1545,11 +1550,12 @@ class RadialNetwork(Optimiser):
                 umbilical_impedance = \
                     local_umbilical._umbilical_impedance_table()
 
-                distance_matrix, path_matrix = self.update_static_cables(
-                                                            umbilical_design,
-                                                            path_matrix,
-                                                            sol,
-                                                            distance_matrix)
+                (sim_distance_matrix,
+                 sim_path_matrix) = self.update_static_cables(
+                                                        umbilical_design,
+                                                        sim_path_matrix,
+                                                        sol,
+                                                        sim_distance_matrix)
 
             else:
 
@@ -1564,12 +1570,12 @@ class RadialNetwork(Optimiser):
                                                          network_connections,
                                                          network_count,
                                                          components,
-                                                         distance_matrix,
+                                                         sim_distance_matrix,
                                                          export_length,
                                                          export_route,
                                                          export_voltage,
                                                          array_voltage,
-                                                         path_matrix,
+                                                         sim_path_matrix,
                                                          umbilical_design,
                                                          umbilical_impedance,
                                                          burial_targets)
