@@ -2310,12 +2310,22 @@ class UmbilicalDesign(object):
 
     '''
 
-    def __init__(self, data):
+    def __init__(self, data, reuse_lengths=True):
+        
+        """
+        Args:
+            reuse_lengths (bool, optional) [-]: Reuse length calculations from
+                previous run, unless the cable db_key has changed.
+                Defaults to True.
+        """
 
-        self.meta_data = data
         self.designs = None
-        self.db_key = None
-        self.umbilical_data = None
+        self._meta_data = data
+        self._reuse_lengths = reuse_lengths
+        self._db_key = None
+        self._umbilical_data = None
+        
+        return
 
     def umbilical_design(self, paths, db_key, sol):
 
@@ -2348,11 +2358,21 @@ class UmbilicalDesign(object):
             independent of if 'wavefloat' or 'tidefloat' is specified.
 
         '''
+        
+        if self._reuse_lengths:
+            
+            if self._db_key is None or self._db_key != db_key:
+                reuse_lengths = False
+            else:
+                reuse_lengths = True
+                
+            self._db_key = db_key
+        
+        dynamic_cable_db = self._meta_data.database.dynamic_cable
+        array_data = self._meta_data.array_data
+        options = self._meta_data.options
 
-        self.db_key = db_key
-
-        self.all_umbilical_data = self.meta_data.database.dynamic_cable[
-            self.meta_data.database.dynamic_cable.id == self.db_key]
+        self._umbilical_data = dynamic_cable_db[dynamic_cable_db.id == db_key]
 
         umbilical_parameters = self._umbilical_map()
 
@@ -2361,38 +2381,52 @@ class UmbilicalDesign(object):
         termination_dict = {}
 
         for device_n in devices:
-
-            cable_termination = \
-                self._set_umbilical_termination(paths, device_n, sol)
-
-            termination_dict['Device' + str(device_n).zfill(3)] = \
-                list(cable_termination)
-
-        umbilical_vars = Variables(
-            termination_dict.keys(),
-            self.meta_data.options.gravity,
-            umbilical_parameters,
-            'wavefloat',
-            self.meta_data.array_data.layout,
-            self.meta_data.array_data.machine_data.connection_point,
-            self.meta_data.array_data.orientation_angle,
-            db_key,
-            self.meta_data.options.umbilical_safety_factor,
-            termination_dict,
-            self.meta_data.array_data.machine_data.draft)
+            
+            cable_termination = self._set_umbilical_termination(paths,
+                                                                device_n,
+                                                                sol)
+            
+            device_id = 'Device' + str(device_n).zfill(3)
+            
+            if reuse_lengths:
+                
+                self.designs[device_id]["termination"] = cable_termination
+                self.designs[device_id]["db_key"] = db_key
+            
+            else:
+                
+                termination_dict[device_id] = cable_termination
+        
+        if reuse_lengths: return
+        
         logMsg = ("Calculating umbilical lengths using cable id: "
                   "{}").format(db_key)
         module_logger.info(logMsg)
+
+        umbilical_vars = Variables(termination_dict.keys(),
+                                   options.gravity,
+                                   umbilical_parameters,
+                                   'wavefloat',
+                                   array_data.layout,
+                                   array_data.machine_data.connection_point,
+                                   array_data.orientation_angle,
+                                   db_key,
+                                   options.umbilical_safety_factor,
+                                   termination_dict,
+                                   array_data.machine_data.draft)
 
         umbilical = Umbilical(umbilical_vars)
 
         all_cable_designs = {}
 
         for device_id in umbilical_vars.devices:
+                            
+            dev_orig = umbilical_vars.sysorig[device_id]
 
-            umbleng, umbxcoords, umbzcoords = umbilical.umbdes(
-                device_id, umbilical_vars.sysorig[device_id])
-
+            (umbleng,
+             umbxcoords,
+             umbzcoords) = umbilical.umbdes(device_id, dev_orig)
+                
             result = {"device": device_id,
                       "length": umbleng,
                       "x coords": umbxcoords,
@@ -2420,7 +2454,7 @@ class UmbilicalDesign(object):
 
         '''
 
-        data = self.all_umbilical_data
+        data = self._umbilical_data
 
         umbilical_db = \
             {data.id.values[0]: {'item3': None,
@@ -2461,15 +2495,16 @@ class UmbilicalDesign(object):
         if len(points) > 1:
             
             line = LineString(points)
-            depth = self.meta_data.site_data.min_water_depth * initial_guess
+            depth = self._meta_data.site_data.min_water_depth * initial_guess
             termination_approximation = line.interpolate(depth)
+
             
         else:
             
             termination_approximation = points[0]
 
-        x, y = zip(*[(self.meta_data.grid.points[point].x,
-                      self.meta_data.grid.points[point].y)
+        x, y = zip(*[(self._meta_data.grid.points[point].x,
+                      self._meta_data.grid.points[point].y)
                                                      for point in line_path])
 
         grid_to_search = np.array([x, y]).T
@@ -2481,7 +2516,7 @@ class UmbilicalDesign(object):
         # Check that z is negative
         assert np.sign(termination_fixed[2]) == -1.0
 
-        return termination_fixed
+        return list(termination_fixed)
 
     def _make_shapely_point_list(self, path):
 
@@ -2495,7 +2530,7 @@ class UmbilicalDesign(object):
 
         '''
 
-        return [self.meta_data.grid.points[point].shapely_point
+        return [self._meta_data.grid.points[point].shapely_point
                 for point in path[::-1]]
 
     def _get_device_ids(self, sol):
@@ -2542,9 +2577,9 @@ class UmbilicalDesign(object):
             np.array(point))[1]].tolist()
 
         # and add z coord
-        z = self.meta_data.grid.grid_pd[
-            (self.meta_data.grid.grid_pd.x == new_coords[0]) &
-            (self.meta_data.grid.grid_pd.y == new_coords[1])]\
+        z = self._meta_data.grid.grid_pd[
+            (self._meta_data.grid.grid_pd.x == new_coords[0]) &
+            (self._meta_data.grid.grid_pd.y == new_coords[1])]\
             ['layer 1 start'].values[0]
 
         new_coords.append(z)
@@ -2561,9 +2596,9 @@ class UmbilicalDesign(object):
         impedance_values = []
         keys = []
 
-        z_data = (self.all_umbilical_data.r_ac.item(),
-                  self.all_umbilical_data.xl.item(),
-                  self.all_umbilical_data.c.item())
+        z_data = (self._umbilical_data.r_ac.item(),
+                  self._umbilical_data.xl.item(),
+                  self._umbilical_data.c.item())
 
         if override:
 
