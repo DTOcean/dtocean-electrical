@@ -163,12 +163,14 @@ def get_burial_depths(route, grid, target_depth):
 
     if target_depth is not None:
 
-        burial_depth = [target_depth]*len(route)
+        burial_depth = [target_depth] * len(route)
 
     else:
+        
+        indexed_grid = grid.set_index("id")
+        depth_cols = ['Target burial depth'] * len(route)
 
-        points = grid[grid.id.isin(route)]
-        burial_depth = points['Target burial depth'].tolist()
+        burial_depth = list(indexed_grid.lookup(route, depth_cols))
 
     return burial_depth
 
