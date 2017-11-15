@@ -2,16 +2,17 @@
 
 Input variables are listed in WP4 Input list.xlsx
 
-Module author: Sam Weller
+Module author: Sam Weller, Mathew Topper
 
 """
-# Start logging
-import logging
-module_logger = logging.getLogger(__name__)
-
-import pandas as pd
 import math
+import logging
+from collections import namedtuple
+
 import numpy as np
+
+# Start logging
+module_logger = logging.getLogger(__name__)
 
 
 class Variables(object):
@@ -106,16 +107,28 @@ class Umbilical(object):
 
     def umbdes(self, deviceid, syspos):
         """ This method will be used to look-up umbilical properties """
-        self.selumbtyp = self._variables.preumb        
-        """ Define geometry """        
-        """ Umbilical defined by WP3 """
-        self.selumbtyp = self._variables.compdict[self._variables.preumb]['item3']
-        if self._variables.systype in ("wavefloat","tidefloat"):
-            """ Lazy-wave geometry comprises three sections; hang-off, buoyancy and decline """
+        
+        # Define geometry
+        # Umbilical defined by WP3
+        preumb_record = self._variables.compdict[self._variables.preumb]
+        self.selumbtyp = preumb_record['item3']
+        
+        if self._variables.systype in ("wavefloat", "tidefloat"):
+            # """ Lazy-wave geometry comprises three sections; hang-off,
+            # buoyancy and decline """
             compblocks = ['hang off', 'buoyancy', 'decline']
-        elif self._variables.systype in ("wavefixed","tidefixed"):
+        elif self._variables.systype in ("wavefixed", "tidefixed"):
             compblocks = ['hang off']
-        umbprops = [0 for row in range(len(compblocks))]
+            
+        prop_cols = ['compid',
+                     'size',
+                     'length',
+                     'dry_mass',
+                     'wet_mass',
+                     'mbl',
+                     'mbr']
+        UmpProps = namedtuple("UmpProps", prop_cols)
+        
         umbwetmass = [0 for row in range(len(compblocks))]
         umbconpt_rotated = [0 for row in range(0, 2)]
         umbtopconn = [0 for row in range(0, 3)]
@@ -140,59 +153,66 @@ class Umbilical(object):
             umbtopconn[2] = self._variables.umbconpt[2]
             klim = 500
             
-        """ Umbilical length set initially as 1.15 x the shortest distance between the upper and 
-            lower connection points """
-        umbleng = 1.15 * math.sqrt((umbtopconn[0] - self._variables.subcabconpt[deviceid][0]) ** 2.0 
-                                 + (umbtopconn[1] - self._variables.subcabconpt[deviceid][1]) ** 2.0
-                                 + (umbtopconn[2] - self._variables.subcabconpt[deviceid][2]) ** 2.0)
+        # Umbilical length set initially as 1.15 x the shortest distance
+        # between the upper and lower connection points
+        subcabconpts = self._variables.subcabconpt[deviceid]
+        
+        umbleng = 1.15 * math.sqrt((umbtopconn[0] - subcabconpts[0]) ** 2.0 
+                                 + (umbtopconn[1] - subcabconpts[1]) ** 2.0
+                                 + (umbtopconn[2] - subcabconpts[2]) ** 2.0)
         umblengcheck = 'False'
         
         for k in range(0,klim):
             # logmsg = ('Umbilical total length {}').format(umbleng)
             # module_logger.debug(logmsg)
-            """ If any z-coordinate is below the global subsea cable connection point reduce 
-                umbilical length by 0.5% """
-            if (self._variables.systype in ("wavefixed","tidefixed") and k > 0 and umblengcheck == 'False'):
+            
+            # If any z-coordinate is below the global subsea cable connection
+            # point reduce umbilical length by 0.5%
+            if (self._variables.systype in ("wavefixed","tidefixed") and
+                k > 0 and umblengcheck == 'False'):
+                
                 umbleng = 0.999 * umbleng
                 
             if self._variables.systype in ("wavefloat","tidefloat"):                         
-                """ Initial lengths of hang-off, buoyancy and decline sections (40%, 20% and 40%) """
+                # Initial lengths of hang-off, buoyancy and decline sections
+                # (40%, 20% and 40%
                 umbsecleng = [0.4 * umbleng, 0.2 * umbleng, 0.4 * umbleng]
             elif self._variables.systype in ("wavefixed","tidefixed"):
                 self.umbleng = umbleng
                 umbsecleng = [umbleng]
-            
-            for i in range(0,len(compblocks)):
+                
+            umbcomptab = {}
+                            
+            for i, block_name in enumerate(compblocks):
+                
                 if compblocks[i] == 'buoyancy':
-                    umbwetmass[i] = -1.4 * self._variables.compdict[self._variables.preumb]['item7'][1]
+                    umbwetmass[i] = -1.4 * preumb_record['item7'][1]
                 else:
-                    umbwetmass[i] = self._variables.compdict[self._variables.preumb]['item7'][1]
-                umbprops[i] = [self._variables.preumb, 
-                            self._variables.compdict[self._variables.preumb]['item6'][0], 
-                            umbsecleng[i], 
-                            self._variables.compdict[self._variables.preumb]['item7'][0], 
-                            umbwetmass[i], 
-                            self._variables.compdict[self._variables.preumb]['item5'][0], 
-                            self._variables.compdict[self._variables.preumb]['item5'][1]]                    
-            """ Set up umbilical table """      
-            colheads = ['compid', 'size', 'length', 'dry mass', 
-                        'wet mass', 'mbl', 'mbr']     
-            self.umbcomptab = pd.DataFrame(umbprops, 
-                                            index=compblocks, 
-                                            columns=colheads)                                            
+                    umbwetmass[i] = preumb_record['item7'][1]
+                    
+                umbprops = UmpProps(self._variables.preumb, 
+                                    preumb_record['item6'][0], 
+                                    umbsecleng[i], 
+                                    preumb_record['item7'][0], 
+                                    umbwetmass[i], 
+                                    preumb_record['item5'][0], 
+                                    preumb_record['item5'][1])
+
+                umbcomptab[block_name] = umbprops
+                
             mlim = 5000
-            """ Catenary tolerance """
+            # """ Catenary tolerance """
             tol = 0.01 
-            """ Distance tolerance """
+            # """ Distance tolerance """
             disttol = 0.001    
-            """ Number of segements along cable """
+            # """ Number of segements along cable """
             numseg = 50
             flipzumb = [0 for row in range(0,numseg)]
-            """ Segment length """
+            # """ Segment length """
             ds = umbleng / numseg 
-            umbxf = math.sqrt((umbtopconn[0] - self._variables.subcabconpt[deviceid][0]) ** 2 
-                            + (umbtopconn[1] - self._variables.subcabconpt[deviceid][1]) ** 2)
-            umbzf = umbtopconn[2] - self._variables.subcabconpt[deviceid][2]
+            umbxf = math.sqrt((umbtopconn[0] - subcabconpts[0]) ** 2 
+                            + (umbtopconn[1] - subcabconpts[1]) ** 2)
+            umbzf = umbtopconn[2] - subcabconpts[2]
             
             Humb = [0 for row in range(numseg)]
             Vumb = [0 for row in range(numseg)] 
@@ -201,18 +221,21 @@ class Umbilical(object):
             xumb = [0 for row in range(numseg)] 
             zumb = [0 for row in range(numseg)] 
             leng = [0 for row in range(numseg)]
-            """ Approximate catenary profile used in first instance to estimate top end loads """
+            
+            # Approximate catenary profile used in first instance to estimate
+            #top end loads
             if umbxf == 0:            
                 lambdacat = 1e6
             elif math.sqrt(umbxf ** 2 + umbzf ** 2) >= umbleng:
                 lambdacat = 0.2
             else:     
                 lambdacat = math.sqrt(3 * (((umbleng ** 2 
-                            - umbzf ** 2) / umbxf ** 2) - 1))                             
-            Hf = max(math.fabs(0.5 * self.umbcomptab.ix['hang off','wet mass'] * self._variables.gravity * umbxf
-                / lambdacat),tol)  
-            Vf = 0.5 * self.umbcomptab.ix['hang off','wet mass'] * self._variables.gravity * ((umbzf
-                / math.tanh(lambdacat)) + umbleng)     
+                                             - umbzf ** 2) / umbxf ** 2) - 1))
+
+            c1 = 0.5 * umbcomptab['hang off'].wet_mass * \
+                                                    self._variables.gravity
+            Hf = max(math.fabs(c1 * umbxf / lambdacat), tol)  
+            Vf = c1 * ((umbzf / math.tanh(lambdacat)) + umbleng)     
             Tf = math.sqrt(Hf ** 2.0 + Vf ** 2.0)
             theta_0 = math.atan(Vf / Hf)
             Tumb[0] = Tf
@@ -221,10 +244,12 @@ class Umbilical(object):
             thetaumb[0] = theta_0    
             xumb[0] = 0.0
             zumb[0] = 0.0
-            for m in range(0,mlim):   
+            
+            for m in range(0, mlim):   
                 if m >= 1:
                     if math.fabs(errumbzf) > disttol * umbzf:                          
-                        if (np.diff(zumb[k-2:k+1:2]) == 0.0 and np.diff(zumb[k-3:k:2]) == 0.0):
+                        if (np.diff(zumb[k-2:k+1:2]) == 0.0
+                            and np.diff(zumb[k-3:k:2]) == 0.0):
                             Tffactor = 0.0001
                         else:
                             Tffactor = 0.001                        
@@ -236,7 +261,8 @@ class Umbilical(object):
                         thetaumb[0] = math.atan(Vumb[0] / Humb[0])
                 
                     if math.fabs(errumbxf) > disttol * umbxf:
-                        if (np.diff(xumb[k-2:k+1:2]) == 0.0 and np.diff(xumb[k-3:k:2]) == 0.0):
+                        if (np.diff(xumb[k-2:k+1:2]) == 0.0
+                            and np.diff(xumb[k-3:k:2]) == 0.0):
                             Hffactor = 0.005
                         else:
                             Hffactor = 0.01
@@ -249,26 +275,36 @@ class Umbilical(object):
                         thetaumb[0] = math.atan(Vumb[0] / Humb[0])
                         if Humb[0] < 0.0:
                             thetaumb[0] = math.pi / 2.0
-                            Humb[0] = 0.0           
-                for k in range(1,numseg):
+                            Humb[0] = 0.0
+                            
+                c2 = umbcomptab['hang off'].wet_mass * \
+                                                self._variables.gravity * ds
+                c3 = umbcomptab['buoyancy'].wet_mass * \
+                                                self._variables.gravity * ds
+                c4 = umbcomptab['decline'].wet_mass * \
+                                                self._variables.gravity * ds
+                
+                for k in range(1, numseg):
                     leng[k] = ds * k 
                     if leng[k] <= umbsecleng[0]:
-                        """ Hang-off section """
-                        Vumb[k] = Vumb[k-1] - self.umbcomptab.ix['hang off','wet mass'] * self._variables.gravity  * ds
+                        # """ Hang-off section """
+                        Vumb[k] = Vumb[k-1] - c2
                         Humb[k] = Humb[k-1] 
                         thetaumb[k] = math.atan(Vumb[k] / Humb[k])
                         xumb[k] = xumb[k-1] + ds * math.cos(thetaumb[k-1])
                         zumb[k] = zumb[k-1] + ds * math.sin(thetaumb[k-1])
-                    elif (leng[k] > umbsecleng[0] and leng[k] <= sum(umbsecleng[0:2])): 
-                        """ Buoyancy section """
-                        Vumb[k] = Vumb[k-1] - self.umbcomptab.ix['buoyancy','wet mass'] * self._variables.gravity * ds
+                    elif (leng[k] > umbsecleng[0] and
+                          leng[k] <= sum(umbsecleng[0:2])): 
+                        # """ Buoyancy section """
+                        Vumb[k] = Vumb[k-1] - c3
                         Humb[k] = Humb[k-1]
                         thetaumb[k] = math.atan(Vumb[k] / Humb[k])
                         xumb[k] = xumb[k-1] + ds * math.cos(thetaumb[k-1])
                         zumb[k] = zumb[k-1] + ds * math.sin(thetaumb[k-1])
-                    elif (leng[k] > sum(umbsecleng[0:2]) and leng[k] <= umbleng):
-                        """ Decline section """
-                        Vumb[k] = Vumb[k-1] - self.umbcomptab.ix['decline','wet mass'] * self._variables.gravity * ds
+                    elif (leng[k] > sum(umbsecleng[0:2]) and
+                          leng[k] <= umbleng):
+                        # """ Decline section """
+                        Vumb[k] = Vumb[k-1] - c4
                         Humb[k] = Humb[k-1]                
                         thetaumb[k] = math.atan(Vumb[k] / Humb[k])                
                         if Vumb[k] < 0.0:
@@ -277,8 +313,8 @@ class Umbilical(object):
                         xumb[k] = xumb[k-1] + ds * math.cos(thetaumb[k-1])                
                         zumb[k] = zumb[k-1] + ds * math.sin(thetaumb[k-1]) 
                     Tumb[k] = math.sqrt(Humb[k] ** 2.0 + Vumb[k] ** 2.0)     
-                    """ Allow cable to embed by up to 0.5m """
-                    if (self._variables.systype in ("wavefixed","tidefixed") 
+                    # """ Allow cable to embed by up to 0.5m """
+                    if (self._variables.systype in ("wavefixed", "tidefixed") 
                         and zumb[k] > umbzf + 0.5):
                         umblengcheck = 'False'                        
                         break
@@ -290,33 +326,38 @@ class Umbilical(object):
                 if umblengcheck == 'False':
                     break
                 
-                if (math.fabs(errumbxf) < disttol * umbxf  and math.fabs(errumbzf) < disttol * umbzf):
-                    # logmsg = ('Solution found, umbilical length {}').format(umbleng)
+                if (math.fabs(errumbxf) < disttol * umbxf and
+                    math.fabs(errumbzf) < disttol * umbzf):
+                    # logmsg = ('Solution found, umbilical length '
+                    #           '{}').format(umbleng)
                     # module_logger.debug(logmsg)  
                     break  
             
             if umblengcheck == 'True':               
                break    
             
-        """ Maximum tension """
+        # """ Maximum tension """
         self.Tumbmax = max(Tumb)
-        """ Radius of curvature along umbilical (starting at device end) """
+        # """ Radius of curvature along umbilical (starting at device end) """
         dzdx = np.diff(zumb) / np.diff(xumb) 
         d2zdx2 = np.diff(dzdx) / np.diff(xumb[:-1])
-        umbradcurv = [abs(number) for number in (((1 + dzdx[0:-1] ** 2.0) ** 1.5) / d2zdx2)]
+        umbradcurv = [abs(number) for number in
+                                  (((1 + dzdx[0:-1] ** 2.0) ** 1.5) / d2zdx2)]
         self.umbradmin = min(umbradcurv)
             
-        """ Umbilical load angle from y-axis """
-        deltaumbx = self._variables.subcabconpt[deviceid][0] - umbtopconn[0]
-        deltaumby = self._variables.subcabconpt[deviceid][1] - umbtopconn[1]
+        # """ Umbilical load angle from y-axis """
+        deltaumbx = subcabconpts[0] - umbtopconn[0]
+        deltaumby = subcabconpts[1] - umbtopconn[1]
+        posloadang = math.atan(deltaumbx / deltaumby)
+        
         if (deltaumbx > 0.0 and deltaumby > 0.0):
-            Humbloadang = math.atan(deltaumbx / deltaumby) 
+            Humbloadang = posloadang
         elif (deltaumbx > 0.0 and deltaumby < 0.0):
-            Humbloadang = math.atan(deltaumbx / deltaumby) + 90.0 * math.pi / 180.0
+            Humbloadang = posloadang + 90.0 * math.pi / 180.0
         elif (deltaumbx < 0.0 and deltaumby < 0.0):
-            Humbloadang = math.atan(deltaumbx / deltaumby) + 180.0 * math.pi / 180.0
+            Humbloadang = posloadang + 180.0 * math.pi / 180.0
         elif (deltaumbx < 0.0 and deltaumby > 0.0):
-            Humbloadang = math.atan(deltaumbx / deltaumby) + 270.0 * math.pi / 180.0
+            Humbloadang = posloadang + 270.0 * math.pi / 180.0
         elif (deltaumbx == 0.0 and deltaumby > 0.0):
             Humbloadang = 0.0
         elif (deltaumbx > 0.0 and deltaumby == 0.0):
@@ -330,15 +371,18 @@ class Umbilical(object):
         HumbloadY = Humb[0] * math.cos(Humbloadang)
         Vumbload = Vumb[0] 
             
-        if (self.Tumbmax > self._variables.umbsf * self._variables.compdict[self._variables.preumb]['item5'][0] 
-            or self.umbradmin < self._variables.compdict[self._variables.preumb]['item5'][1]):
+        if (self.Tumbmax > self._variables.umbsf * preumb_record['item5'][0] or
+            self.umbradmin < preumb_record['item5'][1]):
             umbtencheck = 'False'
         else:
             umbtencheck = 'True'
+        
         for zind, zval in enumerate(zumb):
             flipzumb[zind] = umbtopconn[2] - zval
+        
         # logmsg = ('X coord {}').format(xumb)
         # module_logger.debug(logmsg) 
         # logmsg = ('Z coord {}').format(flipzumb)
         # module_logger.debug(logmsg) 
+        
         return umbleng, xumb, flipzumb
