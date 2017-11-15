@@ -1415,12 +1415,11 @@ class RadialNetwork(Optimiser):
         seabed_graph = self.select_seabed(installation_tool)
         
         if seabed_graph.size() == 0: raise nx.NetworkXNoPath
-                            
-        module_logger.debug("Defining combos...")
         
         combo_export, combo_array, combo_devices = self.control_simulations()
-
-        module_logger.debug("{} combos defined".format(len(combo_export)))
+        n_combos = len(combo_export)
+        
+        module_logger.info("Defined {} network combinations".format(n_combos))
 
         burial_targets = self.meta_data.grid.grid_pd[['id',
                                                       'Target burial depth']]
@@ -1431,14 +1430,14 @@ class RadialNetwork(Optimiser):
 
         device_loc = self.convert_layout_to_list()
         
-        module_logger.debug("Setting substation location...")
+        module_logger.info("Setting substation location...")
 
         cp_loc, strings = self.set_substation_location(
                                             device_loc,
                                             n_cp,
                                             self.meta_data.options.edge_buffer)
 
-        module_logger.debug("Defining export cable route...")
+        module_logger.info("Defining export cable route...")
 
         # get export cable here
         (export_length,
@@ -1448,7 +1447,7 @@ class RadialNetwork(Optimiser):
                                     self.meta_data.grid,
                                     seabed_graph)
 
-        module_logger.debug("Calculating array distances...")
+        module_logger.info("Calculating array distances...")
 
         (distance_matrix,
          path_matrix) = connect.calculate_distance_dijkstra(
@@ -1461,6 +1460,8 @@ class RadialNetwork(Optimiser):
                                            combo_array,
                                            combo_devices)):
             
+            module_logger.info("Evaluating network combination {} of "
+                               "{}".format(i, n_combos))
             export_voltage = simulation[0]
             array_voltage = simulation[1]
             device_per_string = simulation[2]
@@ -1513,7 +1514,7 @@ class RadialNetwork(Optimiser):
                 umbilical_design = None
                 umbilical_impedance = None
                 
-            module_logger.debug("Building network connections...")
+            module_logger.debug("Calculating network cost and efficiency...")
 
             network_connections = self.convert_to_pypower(sol)
             network_count = self.iterate_cable_solutions(n_cp,
@@ -2331,6 +2332,9 @@ class UmbilicalDesign(object):
             self.meta_data.options.umbilical_safety_factor,
             termination_dict,
             self.meta_data.array_data.machine_data.draft)
+        logMsg = ("Calculating umbilical lengths using cable id: "
+                  "{}").format(db_key)
+        module_logger.info(logMsg)
 
         umbilical = Umbilical(umbilical_vars)
 
