@@ -338,8 +338,11 @@ class Grid(object):
                   "installation technique {}").format(len(points), technique)
         module_logger.info(logMsg)
 
-        updated_graph = self.graph.copy()
-        updated_graph.remove_nodes_from(points)
+        if len(points) == 0:
+            updated_graph = self.graph
+        else:
+            updated_graph = self.graph.copy()
+            updated_graph.remove_nodes_from(points)
         
         if technique == 'Jetting':
 

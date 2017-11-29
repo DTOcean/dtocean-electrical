@@ -75,6 +75,9 @@ def grid_processing(site_data, export_data, options):
     constrained_lines = grid.gradient_constraint(
                                         options.equipment_gradient_constraint,
                                         gradient_dict)
+    
+    # Free memory
+    del(gradient_dict)
 
     apply_equipment_constraints(grid,
                                 options, 
@@ -409,7 +412,6 @@ def apply_equipment_constraints(grid,
         for technique, soils in compatibility_matrix_dict.iteritems():
 
             grid.check_equipment_soil_compatibility(technique, soils)
-
             valid_installers.append(technique)
 
     return valid_installers
