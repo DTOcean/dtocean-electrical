@@ -121,14 +121,22 @@ def check_inputs(input_data):
 #            errstr.append('frequency of occ. must sum to one')
 
     # check that array power is in range
-    array_power = (input_data.array_data.n_devices *
-                   input_data.array_data.machine_data.power)
+    max_power_mw = 100
 
-    if not 100000000.0 >= array_power >= 0.:  # 5000000.0:
+    array_power_mw = (input_data.array_data.n_devices *
+                      input_data.array_data.machine_data.power / 1e6)
+
+    if  array_power_mw < 0.:
 
         errstatus -= 1
-        errstr.append("Total installed power is out of range: "
-                      "0 <= Parray (MW) < 100")
+        errstr.append("Total installed power may not be negative")
+        
+    if array_power_mw > max_power_mw:
+
+        logMsg = ("Total installed power '{} MW' exceeds maximum module "
+                  "scope of {} MW").format(array_power_mw,
+                                           max_power_mw)
+        module_logger.warning(logMsg)
 
     # check that landing point is in the area
     # check for optional inputs: control signals, voltage limits,
