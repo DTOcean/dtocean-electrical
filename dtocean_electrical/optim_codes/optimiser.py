@@ -1359,6 +1359,9 @@ class Optimiser(object):
                                                  array_constraints,
                                                  cp_cp_paths,
                                                  cp_cp_distances)
+            
+            # Record the export cable voltage
+            network.export_voltage = export_voltage
 
             self.lcoe.append(network.lcoe)
             self.networks.append(network)
