@@ -744,13 +744,13 @@ class Optimiser(object):
         export = export_voltage
         oec = oec_voltage  # not scaled
 
-        array_cable = self._get_component_id(db.static_cable,
+        array_cable = self._get_component_id(db.array_cable,
                                              "v_rate",
                                              array,
                                              "array cable",
                                              "array voltage")
 
-        export_cable = self._get_component_id(db.static_cable,
+        export_cable = self._get_component_id(db.export_cable,
                                               "v_rate",
                                               export,
                                               "export cable",
@@ -812,7 +812,7 @@ class Optimiser(object):
 
         if self.network_type == 'Star':
 
-            device_cable_all = self._get_component_id(db.static_cable,
+            device_cable_all = self._get_component_id(db.array_cable,
                                                       "v_rate",
                                                       oec,
                                                       "static cable",
@@ -821,8 +821,7 @@ class Optimiser(object):
             # get max current rating for device
             current_rating = self.meta_data.array_data.machine_data.max_current
 
-            db_temp = \
-                db.static_cable[db.static_cable.id.isin(device_cable_all)]
+            db_temp = db.array_cable[db.array_cable.id.isin(device_cable_all)]
 
             test_cable = False
 
@@ -936,7 +935,7 @@ class Optimiser(object):
         ### Build it
         # array / device cable
         db_key = components['array']
-        impedance = self.cable_impedance(db_key)
+        impedance = self.cable_impedance(db_key, "array")
 
         if cp_cp_distances is not None:
 
@@ -952,7 +951,7 @@ class Optimiser(object):
 
         # export cable
         db_key = components['export']
-        impedance = self.cable_impedance(db_key)
+        impedance = self.cable_impedance(db_key, "export")
 
         z_export = \
             pypower_network.calculate_export_impedance(export_length,impedance)
@@ -1090,7 +1089,7 @@ class Optimiser(object):
 
         # export
         db_key = components['export']
-        export_cable_rating = self.cable_rating(db_key)
+        export_cable_rating = self.cable_rating(db_key, 'export')
         export_constraint = ComponentLoading('export', export_voltage)
         export_constraint.check_component_loading(
                 py_power_network.all_results, export_cable_rating,
@@ -1098,7 +1097,7 @@ class Optimiser(object):
         
         # array
         db_key = components['array']
-        array_cable_rating = self.cable_rating(db_key)
+        array_cable_rating = self.cable_rating(db_key, 'array')
         array_constraint = ComponentLoading('array', array_voltage)
         array_constraint.check_component_loading(
                 py_power_network.all_results, array_cable_rating,
@@ -1106,14 +1105,14 @@ class Optimiser(object):
 
         return (export_constraint, array_constraint)
 
-    def cable_impedance(self, db_key):
+    def cable_impedance(self, db_key, cable_type):
 
         '''Extract cable impedance from database.
 
         '''
-
-        cable = self.meta_data.database.static_cable.loc[
-            self.meta_data.database.static_cable['id'] == db_key]
+        
+        db = self._get_cable_db(cable_type)
+        cable = db.loc[db['id'] == db_key]
 
         # r, x, c
         impedance = (cable['r_ac'].values.item(),
@@ -1122,18 +1121,29 @@ class Optimiser(object):
 
         return impedance
         
-    def cable_rating(self, db_key):
+    def cable_rating(self, db_key, cable_type):
         
         '''Extract cable rating from database.
 
         '''
-
-        cable = self.meta_data.database.static_cable.loc[
-            self.meta_data.database.static_cable['id'] == db_key]
+        
+        db = self._get_cable_db(cable_type)
+        cable = db.loc[db['id'] == db_key]
             
         rating = cable['a_air'].values.item()
 
         return int(rating)
+    
+    def _get_cable_db(self, cable_type):
+        
+        if cable_type == "array":
+            db = self.meta_data.database.array_cable
+        elif cable_type == "export":
+            db = self.meta_data.database.export_cable
+        else:
+            raise KeyError("Unsupported cable type: {}".format(cable_type))
+            
+        return db
 
     def check_lcoe(self):
         
