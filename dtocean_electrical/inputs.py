@@ -27,7 +27,29 @@ class ElectricalComponentDatabase(object):
     '''Container class for the electrical component database.
 
     Args:
-        static_cable (pd.DataFrame) [-]: static cable data;
+        array_cable (pd.DataFrame) [-]: array cable data;
+            id (int) [-]: a unique key identifier.
+            n (int) [-]: the number of conductors.
+            v_rate (float) [V]: the rated voltage.
+            a_air (float) [A]: the rated current operating in air.
+            a_bury (float) [A]: the rated current operating buried.
+            a_jtube (float) [A]: the rated current operating in jtube.
+            r_dc (float) [Ohm/km]: dc resistance at 20 degree.
+            r_ac (float) [Ohm/km]: ac resistance at 90 degree.
+            xL (float) [Ohm/km]: inductive reactance per unit length.
+            c (float) [uF/km]: capacitance per unit length.
+            colour (string) [-]: serving colour.
+            dry_mass (float) [kg/km]: cable weight in air per unit length.
+            wet_mass (float) [kg/km]: cable weight in water per unit length.
+            diameter (float) [m]: cable diameter.
+            mbr (float) [m]: minimum bend radius.
+            mbl (float) [N]: minimum break load.
+            fibre (Bool) [-]: fibre optic cable. True = yes, False = no.
+            cost (float) [E/m]: unit cost per metre.
+            max_operating_temp (float) [deg]: maximum temperature.
+            environmental_impact (X) [X]: data yet to be formatted.
+            
+        export_cable (pd.DataFrame) [-]: export cable data;
             id (int) [-]: a unique key identifier.
             n (int) [-]: the number of conductors.
             v_rate (float) [V]: the rated voltage.
@@ -219,7 +241,8 @@ class ElectricalComponentDatabase(object):
             cost (float) [E]: unit cost.
 
     Attributes:
-        static_cable (pd.DataFrame)
+        array_cable (pd.DataFrame)
+        export_cable (pd.DataFrame)
         dynamic_cable (pd.DataFrame)
         wet_mate_connectors (pd.DataFrame)
         dry_mate_connectors (pd.DataFrame)
@@ -233,7 +256,8 @@ class ElectricalComponentDatabase(object):
     '''
 
     def __init__(self,
-                 static_cable,
+                 array_cable,
+                 export_cable,
                  dynamic_cable,
                  wet_mate_connectors,
                  dry_mate_connectors,
@@ -242,7 +266,8 @@ class ElectricalComponentDatabase(object):
                  switchgear,
                  power_quality):
 
-            self.static_cable = static_cable
+            self.array_cable = array_cable
+            self.export_cable = export_cable
             self.dynamic_cable = dynamic_cable
             self.wet_mate_connectors = wet_mate_connectors
             self.dry_mate_connectors = dry_mate_connectors

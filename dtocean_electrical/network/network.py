@@ -1420,7 +1420,6 @@ class Network(object):
         if onshore_cost:
 
             network_keys.append(None)
-            type_.append('Onshore')
             quantity.append(1)
             cost.append(onshore_cost)
 
@@ -1450,8 +1449,8 @@ class Network(object):
 
         '''
 
-        name_map = {'export': 'static_cable',
-                    'array': 'static_cable',
+        name_map = {'export': 'export_cable',
+                    'array': 'array_cable',
                     'wet-mate': 'wet_mate_connectors',
                     'dry-mate': 'dry_mate_connectors',
                     'substation': 'collection_points',
