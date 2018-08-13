@@ -104,7 +104,7 @@ def clip_grid(grid_df_static, grid_df_to_clip):
                      grid_df_to_clip.x,
                      grid_df_to_clip.y)
         
-        grid_df_clipped = grid_df_to_clip[~np.array(inside)]
+        grid_df_clipped = grid_df_to_clip.loc[~np.array(inside), :].copy()
         clipped_coords = [(x, y) for x, y in zip(grid_df_clipped.x,
                                                  grid_df_clipped.y)]
         
@@ -134,7 +134,7 @@ def clip_grid(grid_df_static, grid_df_to_clip):
         
     # Offset the ids of the clipped_grid to avoid clash with the grid_df_static
     offset_index = max(grid_df_static.id) + 1
-    grid_df_clipped.loc[:, 'id'] = grid_df_clipped['id'].apply(
+    grid_df_clipped['id'] = grid_df_clipped['id'].apply(
                                                     lambda x: x + offset_index)
         
     return grid_df_clipped, static_poly
