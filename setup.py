@@ -72,7 +72,7 @@ setup(name='dtocean-electrical',
 	  package_data={'dtocean_electrical': ['config/*.yaml']
                     },
       install_requires=['descartes',
-                        'matplotlib',
+                        'matplotlib<2',
                         'networkx>=2.0',
                         'numpy',
                         'pandas',
