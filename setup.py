@@ -77,7 +77,7 @@ setup(name='dtocean-electrical',
                         'numpy',
                         'pandas',
                         'polite>=0.9',
-                        'pypower',
+                        'pypower>=5.1.4',
                         'scipy',
                         'shapely'
       ],
