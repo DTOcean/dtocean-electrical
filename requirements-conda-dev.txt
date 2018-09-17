@@ -6,7 +6,7 @@ matplotlib <2
 networkx >=2.0
 numpy
 pandas
-pypower
+pypower >=5.1.4
 scipy
 shapely
 
