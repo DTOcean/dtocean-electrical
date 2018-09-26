@@ -10,9 +10,11 @@ This collection of functions perform simple processes on the input data.
 
 """
 
-# Start logging
 import logging
+
+# Start logging
 module_logger = logging.getLogger(__name__)
+
 
 def check_inputs(input_data):
 
@@ -43,7 +45,7 @@ def check_inputs(input_data):
         machine_type = input_data.array_data.machine_data.technology
         machine_type = str(machine_type)
         
-        if (machine_type != 'floating') and (machine_type != 'fixed'): 
+        if machine_type not in ['floating', 'fixed']: 
             
             errstatus -= 1
             errstr.append("Machine type is not valid. Please specify: "
@@ -54,7 +56,7 @@ def check_inputs(input_data):
         errstatus -= 1
         errstr.append('Data format must be str compatible')
 
-    # check that machine power is in range
+    # check that machine power is in range and is float
     try:
 
         power = input_data.array_data.machine_data.power
@@ -77,9 +79,7 @@ def check_inputs(input_data):
         connection = input_data.array_data.machine_data.connection
         connection = str(connection)
 
-        if not ((connection == 'wet-mate') or
-                (connection == 'dry-mate') or
-                (connection == 'dry-mate')):
+        if connection not in ['wet-mate', 'dry-mate']:
 
             errstatus -= 1
             errstr.append("Connection type is not valid. Please enter: "
@@ -90,7 +90,7 @@ def check_inputs(input_data):
         errstatus -= 1
         errstr.append('Data format must be str compatible')
 
-    # check that machine voltage is in range
+    # check that machine voltage is float
     try:
 
         voltage = input_data.array_data.machine_data.voltage
@@ -100,8 +100,6 @@ def check_inputs(input_data):
 
         errstatus -= 1
         errstr.append('Data format must be float compatible')
-
-        
 
 #        ## array checks
 #        # check that both parts of array output exist and that lists are same
@@ -121,7 +119,7 @@ def check_inputs(input_data):
 #            errstr.append('frequency of occ. must sum to one')
 
     # check that array power is in range
-    max_power_mw = 100
+#    max_power_mw = 100
 
     array_power_mw = (input_data.array_data.n_devices *
                       input_data.array_data.machine_data.power / 1e6)
@@ -131,12 +129,12 @@ def check_inputs(input_data):
         errstatus -= 1
         errstr.append("Total installed power may not be negative")
         
-    if array_power_mw > max_power_mw:
-
-        logMsg = ("Total installed power '{} MW' exceeds maximum module "
-                  "scope of {} MW").format(array_power_mw,
-                                           max_power_mw)
-        module_logger.warning(logMsg)
+#    if array_power_mw > max_power_mw:
+#
+#        logMsg = ("Total installed power '{} MW' exceeds maximum module "
+#                  "scope of {} MW").format(array_power_mw,
+#                                           max_power_mw)
+#        module_logger.warning(logMsg)
 
     # check that landing point is in the area
     # check for optional inputs: control signals, voltage limits,
@@ -175,7 +173,8 @@ def check_inputs(input_data):
                        cable.v_rate.item(),
                        input_data.array_data.machine_data.voltage))
 
-                module_logger.warning(msg)
+                errstatus -= 1
+                errstr.append(msg)
 
             # ...and current rating
             if cable.a_air.item() < \
@@ -187,6 +186,7 @@ def check_inputs(input_data):
                        cable.a_air,
                        input_data.array_data.machine_data.max_current))
 
-                module_logger.warning(msg)
+                errstatus -= 1
+                errstr.append(msg)
 
     return errstatus, errstr

@@ -144,7 +144,7 @@ class UmbilicalCable(Cable):
         self.z_coordinates = z_coordinates
 
 
-def get_burial_depths(route, grid, target_depth):
+def get_burial_depths(route, grid, target_depth=None):
 
     '''Get the target burial depths.
 
