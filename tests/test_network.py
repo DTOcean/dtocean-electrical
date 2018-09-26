@@ -1,7 +1,9 @@
 
+import numpy as np
 import pandas as pd
 
-from dtocean_electrical.network.cable import ArrayCable, ExportCable
+from dtocean_electrical.network.cable import (ArrayCable,
+                                              ExportCable)
 from dtocean_electrical.network.network import Network
 
 
@@ -82,4 +84,109 @@ def test_Network_make_cable_routes():
     
     assert len(network.cable_routes) == 6
     assert all(x <= y for x, y in zip(markers, markers[1:]))
+
+
+def test_Network__map_component_types():
     
+    network = Network(None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None)
+    
+    types = ['export',
+             'array',
+             'wet-mate',
+             'dry-mate',
+             'substation',
+             'passive hub',
+             'umbilical']
+    
+    result = network._map_component_types(types)
+    
+    assert result == ['export_cable',
+                      'array_cable',
+                      'wet_mate_connectors',
+                      'dry_mate_connectors',
+                      'collection_points',
+                      'collection_points',
+                      'dynamic_cable']
+
+
+def test_Network_calculate_annual_yield():
+    
+    network = Network(None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None)
+    
+    network.power_histogram = [0.5, 0.5]
+    network.array_power_output = [2, 0.5]
+    
+    annual_yield = network.calculate_annual_yield()
+
+    assert annual_yield == 8760000000.0 + 8760000000.0 / 4
+
+
+def test_Network_calculate_annual_yield_zero():
+    
+    network = Network(None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None)
+    
+    network.power_histogram = [0.5, 0.5]
+    network.array_power_output = [2, np.nan]
+    
+    annual_yield = network.calculate_annual_yield()
+
+    assert annual_yield == 0.
+    
+    
+def test_Network_calculate_lcoe():
+
+    network = Network(None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None)
+    
+    network.total_cost = 10
+    network.annual_yield = 2
+    
+    network.calculate_lcoe()
+    
+    assert network.lcoe == 5e3
+    
+    
+def test_Network_calculate_lcoe_inf():
+
+    network = Network(None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None,
+                      None)
+    
+    network.total_cost = 10
+    network.annual_yield = 0
+    
+    network.calculate_lcoe()
+    
+    assert network.lcoe == np.inf

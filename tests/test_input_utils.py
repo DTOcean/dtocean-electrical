@@ -1,7 +1,184 @@
 
 import pytest
+import pandas as pd
 
 from dtocean_electrical.input_utils.utils import set_burial_from_bpi
+from dtocean_electrical.input_utils.input_tests import check_inputs
+
+
+def test_check_inputs_error_technology(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "flying"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+    
+    
+def test_check_inputs_error_power(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "fixed"
+    input_data.array_data.machine_data.power = 1
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+
+
+def test_check_inputs_error_connection(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "fixed"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'best-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+    
+    
+def test_check_inputs_error_voltage(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "floating"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 3300
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+
+
+def test_check_inputs_error_arraypower(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "floating"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = -1
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+    
+    
+def test_check_inputs_error_max_current(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "floating"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  100
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == -1
+    assert len(errstr) == 1
+
+
+def test_check_inputs(mocker):
+    
+    # Fake a database
+    df_dict = {"id": [1, 2],
+               "v_rate": [6600, 11000],
+               "a_air": [50, 50]}
+    
+    df = pd.DataFrame(df_dict)
+
+    input_data = mocker.Mock()
+    input_data.array_data.machine_data.technology = "floating"
+    input_data.array_data.machine_data.power = 200000
+    input_data.array_data.machine_data.connection = 'dry-mate'
+    input_data.array_data.machine_data.voltage = 6600
+    input_data.array_data.n_devices = 10
+    input_data.options.user_umbilical = 1
+    input_data.database.dynamic_cable = df
+    input_data.array_data.machine_data.max_current =  20
+    
+    errstatus, errstr = check_inputs(input_data)
+    
+    assert errstatus == 0
+    assert len(errstr) == 0
 
 
 @pytest.mark.parametrize("test_input, expected", [
