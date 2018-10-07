@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+
+#    Copyright (C) 2016 Adam Collin
+#    Copyright (C) 2017-2018 Mathew Topper
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module defines the DTOcean electrical subsystems network design process.
 
@@ -6,13 +23,12 @@ This module defines the DTOcean electrical subsystems network design process.
    :platform: Windows
    :synopsis: Control of network design process.
 
-.. moduleauthor:: Adam Collin <a.collin@ed.ac.uk>
+.. moduleauthor:: Adam Collin <adam.collin@ieee.org>
+.. moduleauthor:: Mathew Topper <mathew.topper@dataonlygreater.com>
 """
 
-import os
-import sys
-
 import bisect
+import logging
 from copy import deepcopy
 
 import numpy as np
@@ -24,14 +40,10 @@ from shapely.geometry import LineString, Point, LinearRing
 import array_layout as connect
 from .power_flow_v2 import PyPower, ComponentLoading
 from .umbilical_ajc import Variables, Umbilical
-
-#from input_utils.utils import snap_to_grid
+#from .input_utils.utils import snap_to_grid
 from ..network.network import Network
-#from network.network import Network
 
-import logging
 module_logger = logging.getLogger(__name__)
-#sys.path.insert(1, os.path.join(sys.path[0], '..'))  # added for local testing
 
 
 class Optimiser(object):
