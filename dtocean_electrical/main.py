@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+
+#    Copyright (C) 2016 Adam Collin
+#    Copyright (C) 2017-2018 Mathew Topper
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module defines the main module of the DTOcean electrical subsystems.
 
@@ -6,29 +23,26 @@ This module defines the main module of the DTOcean electrical subsystems.
    :platform: Windows
    :synopsis: Main module of the DTOcean electrical subsystems module
    
-.. moduleauthor:: Adam Collin <a.collin@ed.ac.uk>
+.. moduleauthor:: Adam Collin <adam.collin@ieee.org>
+.. moduleauthor:: Mathew Topper <mathew.topper@dataonlygreater.com>
 """
 
-#import os, sys
-#sys.path.insert(1, os.path.join(sys.path[0], '..')) # added for local testing
-
-# Start logging
 import logging
-module_logger = logging.getLogger(__name__)
 
 import networkx as nx
 import matplotlib.pyplot as plt
-from shapely.geometry import Polygon
 
-from output import plot_devices
-from grid.grid import Grid, GridPoint
-from grid.grid_processing import grid_processing
-from optim_codes.optimiser import (RadialNetwork,
+from .output import plot_devices
+from .grid.grid_processing import grid_processing
+from .input_utils.utils import snap_to_grid
+from .input_utils.input_tests import check_inputs
+from .optim_codes.optimiser import (RadialNetwork,
                                    StarNetwork,
                                    SelectInstallationTool)
 
-from input_utils.utils import snap_to_grid
-from input_utils.input_tests import check_inputs
+# Start logging
+module_logger = logging.getLogger(__name__)
+
 
 class Electrical(object):
 

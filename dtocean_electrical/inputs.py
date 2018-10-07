@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+
+#    Copyright (C) 2016 Adam Collin
+#    Copyright (C) 2017-2018 Mathew Topper
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """
 This module defines the DTOcean electrical subsystems module inputs.
 
@@ -6,21 +23,23 @@ This module defines the DTOcean electrical subsystems module inputs.
    :platform: Windows
    :synopsis: Input module to DTOcean electrical subsystems module.
    
-.. moduleauthor:: Adam Collin <a.collin@ed.ac.uk>
+.. moduleauthor:: Adam Collin <adam.collin@ieee.org>
+.. moduleauthor:: Mathew Topper <mathew.topper@dataonlygreater.com>
 """
 
-# External module import
+from copy import deepcopy
+
 import numpy as np
 from shapely.geometry import Polygon
-from copy import deepcopy
+
 from input_utils.utils import (seabed_range,
                                device_footprints_from_coords,
                                device_footprints_from_rad,
                                ideal_power_quantities,
-                               get_bin_edges,
                                convert_df_column_type,
                                get_key,
                                set_burial_from_bpi)
+
 
 class ElectricalComponentDatabase(object):
 
