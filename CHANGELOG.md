@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add example which uses pickled inputs exported from dtocean-core.
 - Added edge_buffer option to ConfigurationOptions class to ensure substation
   is located a certain distance away from the lease area edge.
+- The selected export cable voltage is now returned with the outputs.
 
 ### Changed
 
@@ -28,7 +29,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Accelerated grid distance and gradient processing by converting parts of the
   grid DataFrame to numpy arrays and reorganising other DataFrame manipulation.
 - Changed networkx single_source_dijkstra function call to match 2.0 API.
-  
+- Optimise by lowest cost per power transmitted, rather than just cost.
+- Allow array rated powers above the maximum scope to be calculated, but still
+  raise a warning.
+- Array and export cable databases are now provided as separate inputs.
+
+### Removed
+
+- Removed incorrect catch for KeyErrors when searching for cable routes.
+
 ### Fixed
 
 - Replaced incorrect Shapely object when calculating design limits.
@@ -40,7 +49,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Use power histogram bin centres for power calculations rather than edges.
 - Add missing soil types for setting burial protection index.
 - Ensure all Grid attributes are referenced by the point "id".
-- Fixed Network make_cable_routes so that cable points are returned in the
+- Fixed Network.make_cable_routes so that cable points are returned in the
   correct order.
 - Improved algorithm for determining the grid spacing.
 - Ensured that umbilical cable paths are correctly joined to the inter-arrays
@@ -49,10 +58,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   one point.
 - Fixed umbilical cable length calculation by changing device rotation frame
   from global to local coordinates.
+- Improved speed of umbilical calculation.
+- Ensure that the burial depth can be calculated if cable paths intersect.
+- Fixed issue where umbilical cables would incorrectly reduce the static cable
+  lengths.
+- Improved memory efficiency for grid processing.
 
-### Removed
-
-- Removed incorrect catch for KeyErrors when searching for cable routes.
 
 ## [1.0.0] - 2017-01-05
 
