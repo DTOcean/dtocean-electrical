@@ -108,9 +108,6 @@ To uninstall the source code and its conda environment:
 $ conda remove --name _dtocean_electro --all
 ```
 
-To uninstall the data package use the link in the Windows start menu program
-folder, or use the control panel.
-
 ## Usage
 
 Example scripts are available in the "examples" folder of the source code.
