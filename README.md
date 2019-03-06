@@ -1,115 +1,147 @@
 [![appveyor](https://ci.appveyor.com/api/projects/status/github/DTOcean/dtocean-electrical?branch=master&svg=true)](https://ci.appveyor.com/project/DTOcean/dtocean-electrical)
 [![codecov](https://codecov.io/gh/DTOcean/dtocean-electrical/branch/master/graph/badge.svg)](https://codecov.io/gh/DTOcean/dtocean-electrical)
-[![Lintly](https://lintly.com/gh/DTOcean/dtocean-electrical/badge.svg)](https://lintly.com/gh/DTOcean/dtocean-electrical/)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bb34506cc82f4df883178a6e64619eaf)](https://www.codacy.com/project/H0R5E/dtocean-electrical/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DTOcean/dtocean-electrical&amp;utm_campaign=Badge_Grade_Dashboard&amp;branchId=8410911)
 [![release](https://img.shields.io/github/release/DTOcean/dtocean-electrical.svg)](https://github.com/DTOcean/dtocean-electrical/releases/latest)
 
 # DTOcean Electrical Sub-Systems Module
 
+This package provides the Electrical Sub-Systems design module for the DTOcean 
+tools. It can design the electrical network of an array of fixed or floating 
+wave or tidal ocean energy converters (constrained by the environment and 
+device design), and calculate the cost and electrical losses. It optimises the 
+design for minimum cost per unit exported power. 
+
+See [dtocean-app](https://github.com/DTOcean/dtocean-app) or [dtocean-core](
+https://github.com/DTOcean/dtocean-app) to use this package within the DTOcean
+ecosystem.
+
+* For python 2.7 only.
+
 ## Installation
 
-### Install Anaconda Python
+Installation and development of dtocean-electrical uses the [Anaconda 
+Distribution](https://www.anaconda.com/distribution/) (Python 2.7)
 
-The recommended Python distribution for testing the Electical Sub-Systems module
-is [Anaconda Python](https://www.continuum.io/downloads). Download the 
-**Windows Python 2.7** installer and execute it.
+### Conda Package
 
-Note: It is recommended that you install Anaconda for **All Users** (not the
-default local user) and that you allow Anaconda to become the system Python
-version. Other options may work, but we can not provide support if Anaconda is
-installed in a different manner.
-
-### Add Public Anaconda Cloud channel
-
-To download some of the dependencies the following channel must be
-added to Ananconda:
+To install:
 
 ```
-conda config --add channels https://conda.anaconda.org/topper
+$ conda install -c dataonlygreater dtocean-electrical
 ```
 
-### Set up an Anaconda environment
+### Source Code
 
-Using a windows command prompt enter the following commands:
-
-```
-conda create -n dtocean_elec python pip pytest ipython-notebook
-```
-
-then, to activate the environment:
+Conda can be used to install dependencies into a dedicated environment from
+the source code root directory:
 
 ```
-activate dtocean_elec
+conda create -n _dtocean_electro python=2.7 pip
 ```
 
-or
+Activate the environment, then copy the `.condrc` file to store installation  
+channels:
 
 ```
-C:\Anaconda\Scripts\activate.bat dtocean_elec
+$ conda activate _dtocean_electro
+$ copy .condarc %CONDA_PREFIX%
 ```
 
-**You must activate the environment every time you use the module.**
-
-### Install Package Dependencies
-
-```
-conda install descartes matplotlib networkx numpy openpyxl pandas pypower scipy shapely-win-py27 xlrd xlwt
-```
-
-The package "polite" can be downloaded from [SETIS](https://setis.ec.europa.eu/dt-ocean/).
+Install [polite](https://github.com/DTOcean/polite) into the environment. For 
+example, if installing it from source:
 
 ```
-cd path\to\polite
-winmake.bat install
+$ cd \\path\\to\\polite
+$ conda install --file requirements-conda-dev.txt
+$ pip install -e .
 ```
 
-### Install Module Package
+Finally, install dtocean-electrical and its dependencies using conda and pip:
 
 ```
-cd path\to\dtocean-electrical
-winmake.bat install
+$ cd \\path\\to\\dtocean-electrical
+$ conda install --file requirements-conda-dev.txt
+$ pip install -e .
 ```
 
-Remember to replace "path\to\" with the real path to the folder containing the
-module source code.
-
-## Testing
-
-### Unit Tests
-
-Unit tests will run automatically as part of the package installation process. 
-They can be re-run using the command:
+To deactivate the conda environment:
 
 ```
-activate dtocean_elec
-cd path\to\package
-winmake.bat test
+$ conda deactivate
 ```
 
-Note, you only need to activate the Anaconda environment once per session.
+### Tests
 
-### Jupyter Notebooks
+A test suite is provided with the source code that uses [pytest](
+https://docs.pytest.org).
 
-Examples of using the mdoule are given in [Jupyter Notebooks](http://jupyter.org/)
-which are found in the "notebooks" folder of the dtocean-electrical source code.
-The notebooks should be started from the Anaconda environment as follows:
+If not already active, activate the conda environment set up in the [Source 
+Code](#source-code) section:
 
 ```
-activate dtocean_elec
-start jupyter notebook
+$ conda activate _dtocean_electro
 ```
 
-Note, you only need to activate the Anaconda environment once per session.
+Install packages required for testing to the environment (one time only):
 
-**It is important that the test data found in the "sample_data" directory is
-copied into the same directory where the notebooks are being executed from**.
-You can customise this directory using the config file described
-[here](http://jupyter-notebook.readthedocs.io/en/latest/config.html)
-and setting the "notebook_dir" variable.
+```
+$ conda install -y pytest pytest-mock openpyxl xlrd xlwt
+```
 
-Once the test data has been placed alongside the notebook, the notebook can be
-executed in the normal way.
+Run the tests:
 
-## DTOcean Project
+``` 
+$ py.test tests
+```
 
-DTOcean - "Optimal Design Tools for Ocean Energy Arrays" is funded by the 
-European Commission’s 7th Framework Programme. Grant agreement number: 608597
+### Uninstall
+
+To uninstall the conda package:
+
+```
+$ conda remove dtocean-electrical
+```
+
+To uninstall the source code and its conda environment:
+
+```
+$ conda remove --name _dtocean_electro --all
+```
+
+To uninstall the data package use the link in the Windows start menu program
+folder, or use the control panel.
+
+## Usage
+
+Example scripts are available in the "examples" folder of the source code.
+
+```
+cd examples
+python electrical_run.py
+```
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to
+discuss what you would like to change.
+
+See [this blog post](
+https://www.dataonlygreater.com/latest/professional/2017/03/09/dtocean-development-change-management/)
+for information regarding development of the DTOcean ecosystem.
+
+Please make sure to update tests as appropriate.
+
+## Credits
+
+This package was initially created as part of the [EU DTOcean project](
+https://www.dtoceanplus.eu/About-DTOceanPlus/History) by:
+
+ * Adam Colin at [the University of Edinburgh](https://www.ed.ac.uk/)
+ * Mathew Topper at [TECNALIA](https://www.tecnalia.com)
+
+It is now maintained by Mathew Topper at [Data Only Greater](
+https://www.dataonlygreater.com/).
+
+## License
+
+[GPL-3.0](https://choosealicense.com/licenses/gpl-3.0/)

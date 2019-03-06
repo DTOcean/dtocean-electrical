@@ -45,6 +45,7 @@ switchgear = xls_file.parse(sheet_names[6])
 power_quality = xls_file.parse(sheet_names[7])
 
 database = ElectricalComponentDatabase(static_cables,
+                                       static_cables,
                                        dynamic_cables,
                                        wet_mate,
                                        dry_mate,
@@ -55,16 +56,12 @@ database = ElectricalComponentDatabase(static_cables,
 
 ## Define lease area
 # load bathy data from excel
-file_name = 'lease_area.xlsx'
+file_name = 'lease_area_0709.xlsx'
 xls_file = pd.ExcelFile(os.path.join(data_dir, file_name), encoding = 'utf-8')
 sheet_names = xls_file.sheet_names
 lease_bathymetry = xls_file.parse(sheet_names[0])
 
-lease_exclusion_zones = [Polygon([(40., 40.),
-                                  (40., 110.),
-                                  (110., 110.),
-                                  (110., 40.)])
-                        ]
+lease_exclusion_zones = [Polygon([(40.,40.),(40.,110.),(110.,110.),(110.,40.)])]
 
 lease_max_temp = 10.
 lease_max_soil_res = 10.
@@ -84,12 +81,12 @@ site = ElectricalSiteData(lease_bathymetry,
 
 ## Define export area
 # load bathy data from excel         
-file_name = 'export_area.xlsx'
+file_name = 'export_area_0709.xlsx'
 xls_file = pd.ExcelFile(os.path.join(data_dir, file_name), encoding = 'utf-8')
 sheet_names = xls_file.sheet_names
 export_bathymetry = xls_file.parse(sheet_names[0])
 
-export_exclusion_zones = None
+export_exclusion_zones = [Polygon([(40.,40.),(40.,110.),(110.,110.),(110.,40.)])]
 
 export_max_temp = 10.
 export_max_soil_res = 10.
@@ -110,12 +107,13 @@ export = ElectricalExportData(export_bathymetry,
 
 ## Define the device
 technology = 'fixed'
-power = 3000000.
+power = 1000000.
 voltage = 11000.
 connection = 'wet-mate'
 footprint_radius = None
 footprint_coords = [(0.0,25.0,0.), (-25.0,-25.0,0.), (25.,-25.,0.)]
-variable_power_factor = [[1,1],[0.5,1],[0.8,1]]
+#variable_power_factor = [[1,1],[0.5,1],[0.8,1]]
+variable_power_factor = [[ 0.5,  0.8], [ 1. ,  1. ]]
 constant_power_factor = 0.98
 connection_point = (0,0,0)
 equilibrium_draft = 0.
@@ -133,13 +131,27 @@ machine = ElectricalMachineData(technology,
                                 )
 
 ## Define the array
-landing_point = (0.,0.,0.)
-layout = {'Device001': (100.,900.,0.),
-          'Device002': (300.,900.,0.),
-          'Device003': (400.,600.,0.)}
+landing_point = (0.0, 1250.0)
+
+#layout = {'Device003': (1280.618258923915, 687.5601863780051),
+#          'Device002': (1200.0, 1100.0),
+#          'Device001': (1119.381741076085, 1512.4398136219947),
+#          'Device005': (1038.7634821521701, 1924.8796272439897), 
+#          'Device004': (1498.0557936438454, 1694.6810423392592)}
+
+layout = {'Device003': (1079.8987816601496, 1894.1817446392695),
+          'Device002': (1494.017681525595, 1686.6241993763826),
+          'Device001': (1139.949390830075, 1497.0908723196349),
+          'Device005': (1260.050609169925, 702.9091276803653),
+          'Device004': (1200.0, 1100.0)}
+          
+#layout = {'Device003': (1200.0, 1100.0),
+#          'Device002': (1057.1060877331174, 1951.735312685243),
+#          'Device001': (1128.5530438665587, 1525.8676563426216),
+#          'Device004': (1271.4469561334413, 674.1323436573786)}
 
 number_of_devices = len(layout)
-array_output = [0.6, 0.3, 0.1]
+array_output = [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]
 onshore_infrastructure_cost = 1000000.
 onshore_losses = 0.
 control_signal_type = 'fibre_optic'
@@ -167,12 +179,12 @@ array = ElectricalArrayData(machine,
                             )
 
 ## Configuration options
-network_configuration = ['radial', 'star']
+network_configuration = ['Star']
 export_voltage = None
 export_cables = None
 ac_power_flow = True
-target_burial_depth_array = None
-target_burial_depth_export = None
+target_burial_depth_array = 1.0
+target_burial_depth_export = 2.0
 connector_type = None
 collection_point_type = None
 devices_per_string = None
@@ -184,9 +196,6 @@ xls_file = pd.ExcelFile(os.path.join(data_dir, file_name), encoding = 'utf-8')
 sheet_names = xls_file.sheet_names
 equipment_soil_compatibility = xls_file.parse(sheet_names[0])
 
-umbilical_safety_factor = 1.4925
-gravity = 9.880665
-
 options = ConfigurationOptions(network_configuration,
                                export_voltage,
                                export_cables,
@@ -197,14 +206,11 @@ options = ConfigurationOptions(network_configuration,
                                collection_point_type,
                                devices_per_string,
                                equipment_gradient_constraint,
-                               equipment_soil_compatibility,
-                               umbilical_safety_factor,
-                               gravity,
-                               )
+                               equipment_soil_compatibility)
 
 ## Create object and run
 Electrical = Electrical(site, array, export, options, database)
-solution = Electrical.run_module(plot=False)
+solution, _ = Electrical.run_module(plot=True)
 solution.print_result()
 
 ### Some plotting of these

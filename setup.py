@@ -63,13 +63,13 @@ class CleanPyc(Command):
                 yield os.path.join(root, fname)
 
 setup(name='dtocean-electrical',
-      version='1.1.dev0',
+      version='2.0.0',
       description='Electrical sub-systems module for the DTOcean tools',
-      author='Adam Collin, Mathew Topper',
-      author_email='A.Collin@ed.ac.uk, dataonlygreater@gmail.com',
+      maintainer='Mathew Topper',
+      maintainer_email='mathew.topper@dataonlygreater.com',
       license="GPLv3",
       packages=find_packages(),
-	  package_data={'dtocean_electrical': ['config/*.yaml']
+      package_data={'dtocean_electrical': ['config/*.yaml']
                     },
       install_requires=['descartes',
                         'matplotlib<2',

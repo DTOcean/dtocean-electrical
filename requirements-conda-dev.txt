@@ -1,6 +1,4 @@
-# REQUIREMENTS FOR CONDA INSTALLATION
-
-# INSTALLATION REQUIRED DEPENDENCIES
+# REQUIREMENTS FOR CONDA INSTALLATION (EXCLUDING DTOCEAN PACKAGES)
 descartes
 matplotlib <2
 networkx >=2.0
@@ -9,11 +7,3 @@ pandas
 pypower >=5.1.4
 scipy
 shapely
-
-# TEST DEPENDENCIES
-pytest-cov
-pytest-mock
-openpyxl
-xlrd
-xlwt
-
