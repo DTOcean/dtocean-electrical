@@ -133,7 +133,7 @@ Please make sure to update tests as appropriate.
 This package was initially created as part of the [EU DTOcean project](
 https://www.dtoceanplus.eu/About-DTOceanPlus/History) by:
 
- * Adam Colin at [the University of Edinburgh](https://www.ed.ac.uk/)
+ * Adam Collin at [the University of Edinburgh](https://www.ed.ac.uk/)
  * Mathew Topper at [TECNALIA](https://www.tecnalia.com)
 
 It is now maintained by Mathew Topper at [Data Only Greater](
