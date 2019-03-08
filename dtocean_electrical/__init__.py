@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2016 Adam Collin, Mathew Topper
+#    Copyright (C) 2019 Mathew Topper
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -19,6 +20,10 @@ import logging
 
 from polite.paths import ObjDirectory, UserDataDirectory, DirectoryMap
 from polite.configuration import Logger
+
+# Define build number for packaging test
+from ._build import BUILD
+__build__ = BUILD
 
 # Set default logging handler to avoid "No handler found" warnings.
 try:  # Python 2.7+
