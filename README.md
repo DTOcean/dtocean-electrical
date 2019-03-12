@@ -1,6 +1,6 @@
 [![appveyor](https://ci.appveyor.com/api/projects/status/github/DTOcean/dtocean-electrical?branch=master&svg=true)](https://ci.appveyor.com/project/DTOcean/dtocean-electrical)
 [![codecov](https://codecov.io/gh/DTOcean/dtocean-electrical/branch/master/graph/badge.svg)](https://codecov.io/gh/DTOcean/dtocean-electrical)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bb34506cc82f4df883178a6e64619eaf)](https://www.codacy.com/project/H0R5E/dtocean-electrical/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DTOcean/dtocean-electrical&amp;utm_campaign=Badge_Grade_Dashboard&amp;branchId=8410911)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/64b45b67ff304732be79435c3fb20751)](https://www.codacy.com/project/H0R5E/dtocean-electrical/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DTOcean/dtocean-electrical&amp;utm_campaign=Badge_Grade_Dashboard&amp;branchId=11704041)
 [![release](https://img.shields.io/github/release/DTOcean/dtocean-electrical.svg)](https://github.com/DTOcean/dtocean-electrical/releases/latest)
 
 # DTOcean Electrical Sub-Systems Module
@@ -113,8 +113,8 @@ $ conda remove --name _dtocean_electro --all
 Example scripts are available in the "examples" folder of the source code.
 
 ```
-cd examples
-python electrical_run.py
+$ cd examples
+$ python electrical_run.py
 ```
 
 ## Contributing
