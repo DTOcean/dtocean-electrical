@@ -401,6 +401,13 @@ def calculate_distance_dijkstra(layout_grid,
     
         ij_length, ij_path = dijkstra(graph, a, b, grid)
         
+        if len(ij_path) < 2:
+            
+            err_str = ("The path between two devices contains less than two "
+                       "grid points. Consider increasing spacing between "
+                       "devices or grid resolution.")
+            raise RuntimeError(err_str)
+        
         distance_array[i, j] = ij_length
         path_array[i, j] = ij_path
                   
