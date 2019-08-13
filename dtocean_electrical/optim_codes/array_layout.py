@@ -635,10 +635,17 @@ def crossing_dijkstra(path, route, path_array, devices, site_grid):
     
     # initiate crossing vector
     cross = []
+    
     for edge in route:
         # make line
         line2 = path_array[edge[0]][edge[1]]
+        
+        if len(line2) < 2:
+            cross.append(True)
+            continue
+        
         line2 = make_linestring(line2, site_grid)
+        
         if line1.intersection(line2).is_empty:
             cross.append(False)
         elif line1.intersection(line2) == Point(devices[path[0]-1][2][0],devices[path[0]-1][2][1]):
