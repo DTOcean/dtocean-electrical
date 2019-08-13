@@ -573,7 +573,7 @@ class Optimiser(object):
             lease = lease.buffer(-edge_buffer)
             
         lease_area_ring = LinearRing(list(lease.exterior.coords))
-
+        
         min_x = min(device_loc[:, 0])
         max_x = max(device_loc[:, 0])
         diff_x = max_x - min_x
@@ -601,9 +601,16 @@ class Optimiser(object):
         shift = 100  # this can be updated based on device spacing
         shift_increment = 0
         shift_flag = False
-
+        
         # check spread of devices
-        if diff_x/diff_y >= 1:
+        if len(device_loc) < 2:
+            
+            interim_estimate = (initial_estimate_on_grid[0] + shift, min_y)
+            
+            shift_flag = True
+            shift_increment += shift
+        
+        elif diff_x/diff_y >= 1:
 
             # these devices are considered stacked in the y dimension
             mid_point_x = min_x + diff_x/2
