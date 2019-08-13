@@ -73,11 +73,7 @@ def snap_to_grid(grid, point, lease):
 
 def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
     
-    # set to lease edge
     # find poi between line of intial to shore and lease area
-
-    # can make function
-    
     lease_x = lease_bathymetry.x.tolist()
     lease_y = lease_bathymetry.y.tolist()
 
@@ -113,15 +109,15 @@ def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
             neighbour = lease_bathymetry[
                             (lease_bathymetry.i == neighbour[0]) &
                             (lease_bathymetry.j == neighbour[1])]
-
+            
             neighbour_shapely = Point(neighbour.x, neighbour.y)
-
+            
             if neighbour_shapely.within(lease):
-
+                
                 interim_estimate = (neighbour.x.item(), neighbour.y.item())
-
+                
                 break
-
+    
     return interim_estimate
 
 def substation_in_site(grid_df, cp_loc, lease):
