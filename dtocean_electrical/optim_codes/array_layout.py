@@ -82,12 +82,23 @@ def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
     if line.intersects(lease_area_ring):
         
         poi = lease_area_ring.intersection(line)
+        
+        if isinstance(poi, MultiPoint):
+            
+            line_end = Point(line.coords[-1])
+            poi_candidates = list(poi)
+            
+            distances = [p.distance(line_end) for p in poi_candidates]
+            min_distance_idx = distances.index(min(distances))
+            
+            poi = poi_candidates[min_distance_idx]
+        
         poi = [poi.x, poi.y]
-
+        
         # snap to nearest point
         interim_estimate_snapped = snap_to_grid(
             grid_to_search, poi, lease_bathymetry)
-
+        
         # then shift
         
         # find cp_loc in list of points
