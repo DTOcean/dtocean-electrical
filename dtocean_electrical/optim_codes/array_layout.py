@@ -32,10 +32,10 @@ import itertools
 
 import numpy as np
 import networkx as nx
-import scipy.spatial
 from scipy import spatial
 from scipy.misc import comb
 from shapely.geometry import LineString, Point, MultiPoint
+from shapely.ops import nearest_points
 
 
 module_logger = logging.getLogger(__name__)
@@ -73,12 +73,14 @@ def snap_to_grid(grid, point, lease):
 
 def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
     
+    interim_estimate = None
+    
     # find poi between line of intial to shore and lease area
     lease_x = lease_bathymetry.x.tolist()
     lease_y = lease_bathymetry.y.tolist()
-
+    
     grid_to_search = np.array([lease_x, lease_y]).T
-
+    
     if line.intersects(lease_area_ring):
         
         poi = lease_area_ring.intersection(line)
@@ -94,40 +96,41 @@ def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
             poi = poi_candidates[min_distance_idx]
         
         poi = [poi.x, poi.y]
+    
+    else:
         
-        # snap to nearest point
-        interim_estimate_snapped = snap_to_grid(
-            grid_to_search, poi, lease_bathymetry)
+        poi = nearest_points(line, lease_area_ring)[1].coords[0]
+    
+    # snap to nearest point
+    interim_estimate_snapped = snap_to_grid(
+                                    grid_to_search, poi, lease_bathymetry)
+    
+    # then shift
+    
+    # find cp_loc in list of points
+    grid_point = lease_bathymetry[
+                    (lease_bathymetry.x == interim_estimate_snapped[0]) &
+                    (lease_bathymetry.y == interim_estimate_snapped[1])]
+    
+    # get neighbours
+    check_x_direction = [ 0,  0, -1,  1, -1,  1, -1,  1]
+    check_y_direction = [-1,  1,  0,  0, -1,  1,  1, -1]
+    
+    neighbour_ids = [
+        (grid_point.i.item() - i_shift, grid_point.j.item() - j_shift)
+            for i_shift, j_shift in zip(check_x_direction, check_y_direction)]
+    
+    for neighbour in neighbour_ids:
         
-        # then shift
+        neighbour = lease_bathymetry[
+                        (lease_bathymetry.i == neighbour[0]) &
+                        (lease_bathymetry.j == neighbour[1])]
         
-        # find cp_loc in list of points
-        grid_point = lease_bathymetry[
-            (lease_bathymetry.x == interim_estimate_snapped[0]) & 
-            (lease_bathymetry.y == interim_estimate_snapped[1])]
-                
-        # get neighbours
-        check_x_direction = [0, 0, -1, +1, -1, +1, -1, +1]
-        check_y_direction = [-1, +1, 0, 0, -1, +1, -1, +1]
+        neighbour_shapely = Point(neighbour.x, neighbour.y)
         
-        neighbour_ids = [
-            (grid_point.i.item() - i_shift, grid_point.j.item() - j_shift)
-            for i_shift, j_shift
-            in zip(check_x_direction, check_y_direction)]
-        
-        for neighbour in neighbour_ids:
-            
-            neighbour = lease_bathymetry[
-                            (lease_bathymetry.i == neighbour[0]) &
-                            (lease_bathymetry.j == neighbour[1])]
-            
-            neighbour_shapely = Point(neighbour.x, neighbour.y)
-            
-            if neighbour_shapely.within(lease):
-                
-                interim_estimate = (neighbour.x.item(), neighbour.y.item())
-                
-                break
+        if neighbour_shapely.within(lease):
+            interim_estimate = (neighbour.x.item(), neighbour.y.item())
+            break
     
     return interim_estimate
 
@@ -351,7 +354,7 @@ def calculate_distance(array_layout, n_oec, substation_location):
 
     layoutlist.insert(0,(substation_location[0],substation_location[1],0.0))
 
-    distance_list = ([scipy.spatial.distance.euclidean(a,b)
+    distance_list = ([spatial.distance.euclidean(a,b)
                       for a, b
                       in itertools.product(np.asarray(layoutlist),repeat=2)])
 

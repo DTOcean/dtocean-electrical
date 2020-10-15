@@ -655,15 +655,20 @@ class Optimiser(object):
         interim_estimate_shapely = Point(interim_estimate[:2])
 
         if not interim_estimate_shapely.within(lease):
-
+            
             interim_estimate = connect.set_substation_to_edge(
                                         export_line,
                                         lease_area_ring,
                                         self.meta_data.site_data.bathymetry,
                                         lease)
-
+            
+            if interim_estimate is None:
+                
+                err_msg = "Failed to find suitable substation location"
+                raise RuntimeError(err_msg)
+            
             close = False
-
+        
         else:
 
             close = connect.closeness_test(
