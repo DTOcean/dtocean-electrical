@@ -1629,40 +1629,44 @@ class RadialNetwork(Optimiser):
         v_export = []
         v_array = []
         n_devices = []
+        max_devices_per_line = None
         
-        if self.meta_data.options.devices_per_string:
-
+        if self.meta_data.options.devices_per_string is not None:
+            
             if (self.meta_data.options.devices_per_string >
                     self.meta_data.array_data.n_devices):
-
+                
                 msg = ("Max number of devices per string {} is greater than "
                         "array size {}. Capped at array size.").format(
                                 self.meta_data.options.devices_per_string,
                                 self.meta_data.array_data.n_devices)
-
                 module_logger.warning(msg)
-
+                
                 max_devices_per_line = self.meta_data.array_data.n_devices
-
+            
             else:
                 
                 max_devices_per_line = \
                     self.meta_data.options.devices_per_string
-
-        else:
-            
-            max_devices_per_line = self.meta_data.array_data.n_devices
-
+        
         for combo in self.voltage_combinations:
-
-            for device_per_line in range(max_devices_per_line):
-
+            
+            if max_devices_per_line is not None:
+                
+                v_export.append(combo[0])
+                v_array.append(combo[1])
+                n_devices.append(max_devices_per_line)
+                
+                continue
+            
+            for device_per_line in range(self.meta_data.array_data.n_devices):
+                
                 v_export.append(combo[0])
                 v_array.append(combo[1])
                 n_devices.append(device_per_line)
-
+        
         return v_export, v_array, n_devices
-
+    
     def brute_force_method(self, n_cp,
                                  max_,
                                  cp_loc,
