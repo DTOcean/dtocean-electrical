@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2016 Adam Collin
-#    Copyright (C) 2017-2018 Mathew Topper
+#    Copyright (C) 2017-2021 Mathew Topper
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -496,23 +496,10 @@ def get_device_locations(layout, site_grid):
 
 def calculate_saving_vector(distance_vector, n_oec):
     
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        saving_vector_filtered (list): Description.
-
-    '''
-    
     saving_vector = [(i, j, distance_vector[0][i] - distance_vector[j][i])
                         for i in range(0, n_oec + 1)
                             for j in range(0, n_oec + 1) if i != j]
-
+    
     saving_vector_sorted = sorted(saving_vector,
                                   key=lambda i: (float(i[2])), reverse=True)
     # tidy up savings vector by removing self connecting nodes
@@ -520,7 +507,7 @@ def calculate_saving_vector(distance_vector, n_oec):
     for point in saving_vector_sorted:
         if point[0] != point[1] and point[2] >= 0.0:
             saving_vector_filtered.append(point)
-
+    
     return saving_vector_filtered
 
 
@@ -544,33 +531,25 @@ def check_in_route(point_to_check, route):
     else:
         in_set = False
     return in_set
-    
+
+
 def check_in_path(point_to_check, path):
     
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
-    
     same_path = []
+    
     for i in range(0, len(path)):
         if point_to_check[0] in path[i] and point_to_check[1] in path[i]:
             same_path.append(True)
         else:
             same_path.append(False)
+    
     if not sum(same_path):
         same_path = False
     else:
         same_path = True
+    
     return same_path
+
 
 def check_neighbour_number(route, point_to_check):
     
@@ -608,36 +587,25 @@ def check_neighbour_number(route, point_to_check):
         t = True
     return t
 
-def check_path_capacity(path, point_to_check, cap):
-    
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
 
-    '''
+def check_path_capacity(path, point_to_check, cap):
     
     for i in path:
         if point_to_check[0] in i:
-            # get length
-            path_length_k = len(i)-1
+            path_length_k = len(i) - 1
         if point_to_check[1] in i:
-            # get length
-            path_length_u = len(i)-1
+            path_length_u = len(i) - 1
     
     # sum path lengths and check capacity
     total = path_length_k + path_length_u
+    
     if total > cap:
         cap_exceed = True
     else:
         cap_exceed = False
+    
     return cap_exceed
+
 
 def crossing_dijkstra(path, route, path_array, devices, site_grid):
     
@@ -890,19 +858,6 @@ def y_intercept(point, gradient):
 
 def update_path(point, route):
 
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
-    
     route.append((point[0],point[1]))
     # Remove link to 0 point
     if (point[0],0) in route:
@@ -973,35 +928,26 @@ def run_this(saving_vector, path, route, n_oec, string_max, layout):
 
     return path
 
-def run_this_dijkstra(saving_vector, path, route, n_oec, string_max,
-                      path_array, devices, site_grid):
-    
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
+def run_this_dijkstra(saving_vector,
+                      path,
+                      route,
+                      n_oec,
+                      string_max,
+                      path_array,
+                      devices,
+                      site_grid):
     
     for point in saving_vector:
-        if ((check_in_path(point, path) == 0) and
-            (check_in_route(point, route) == 1) and
-            (check_neighbour_number(route, point) == 1) and
-            (check_path_capacity(path, point, string_max) == 0) and
-            (crossing_dijkstra(point,
-                               route, 
-                               path_array,
-                               devices,
-                               site_grid) == 0)):
-
+        if (not check_in_path(point, path) and
+            check_in_route(point, route) and
+            check_neighbour_number(route, point) and
+            not check_path_capacity(path, point, string_max) and
+            not crossing_dijkstra(point,
+                                  route, 
+                                  path_array,
+                                  devices,
+                                  site_grid)):
+                
                 path = update_path(point, route)
-
+    
     return path
-
-

@@ -1542,7 +1542,7 @@ class RadialNetwork(Optimiser):
                                            combo_devices)):
             
             module_logger.info("Evaluating network combination {} of "
-                               "{}".format(i, n_combos))
+                               "{}".format(i + 1, n_combos))
             
             # Copy the distance and path matrices
             sim_distance_matrix = deepcopy(distance_matrix)
