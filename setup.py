@@ -62,8 +62,28 @@ class CleanPyc(Command):
                     continue
                 yield os.path.join(root, fname)
 
+
+def read_yaml(rel_path):
+    with open(rel_path, 'r') as stream:
+        data_loaded = yaml.safe_load(stream)
+    return data_loaded
+
+
+def get_appveyor_version():
+    
+    data = read_yaml("appveyor.yml")
+    
+    if "version" not in data:
+        raise RuntimeError("Unable to find version string.")
+    
+    appveyor_version = data["version"]
+    last_dot_idx = appveyor_version.rindex(".")
+    
+    return appveyor_version[:last_dot_idx]
+
+
 setup(name='dtocean-electrical',
-      version='2.0.0',
+      version=get_appveyor_version(),
       description='Electrical sub-systems module for the DTOcean tools',
       maintainer='Mathew Topper',
       maintainer_email='mathew.topper@dataonlygreater.com',

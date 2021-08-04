@@ -21,9 +21,9 @@ import logging
 from polite.paths import ObjDirectory, UserDataDirectory, DirectoryMap
 from polite.configuration import Logger
 
-# Define build number for packaging test
-from ._build import BUILD
-__build__ = BUILD
+# credentials
+__authors__ = ['DTOcean Developers']
+__version__ = get_distribution('dtocean-electrical').version
 
 # Set default logging handler to avoid "No handler found" warnings.
 try:  # Python 2.7+
