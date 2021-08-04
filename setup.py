@@ -3,9 +3,12 @@
 import os
 import sys
 
+import yaml
+
 from distutils.cmd import Command
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
+
 
 class PyTest(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
@@ -91,6 +94,7 @@ setup(name='dtocean-electrical',
       packages=find_packages(),
       package_data={'dtocean_electrical': ['config/*.yaml']
                     },
+      setup_requires=['pyyaml'],
       install_requires=['descartes',
                         'matplotlib<2',
                         'networkx>=2.0',
