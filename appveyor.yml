@@ -7,18 +7,6 @@
 #      general configuration      #
 #---------------------------------#
 
-# Build only for commits to certain locations
-only_commits:
-  files:
-    - dtocean_electrical/
-    - sample_data/
-    - tests/
-    - setup.py
-    
-skip_commits:
-  files:
-    - dtocean_electrical/config/
-
 # version format
 version: 2.0.0.build{build}
 
