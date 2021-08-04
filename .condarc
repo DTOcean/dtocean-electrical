@@ -1,7 +1,9 @@
 pinned_packages:
   - python=2
-  - pyqt=4
+  - conda=4.6.14
+  - pyqt=4.11.4=py27_5
 
 channels:
   - defaults
+  - free
   - dataonlygreater
