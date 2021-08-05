@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #    Copyright (C) 2016 Adam Collin
-#    Copyright (C) 2017-2018 Mathew Topper
+#    Copyright (C) 2017-2021 Mathew Topper
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -32,10 +32,10 @@ import itertools
 
 import numpy as np
 import networkx as nx
-import scipy.spatial
 from scipy import spatial
 from scipy.misc import comb
 from shapely.geometry import LineString, Point, MultiPoint
+from shapely.ops import nearest_points
 
 
 module_logger = logging.getLogger(__name__)
@@ -73,55 +73,65 @@ def snap_to_grid(grid, point, lease):
 
 def set_substation_to_edge(line, lease_area_ring, lease_bathymetry, lease):
     
-    # set to lease edge
-    # find poi between line of intial to shore and lease area
-
-    # can make function
+    interim_estimate = None
     
+    # find poi between line of intial to shore and lease area
     lease_x = lease_bathymetry.x.tolist()
     lease_y = lease_bathymetry.y.tolist()
-
+    
     grid_to_search = np.array([lease_x, lease_y]).T
-
+    
     if line.intersects(lease_area_ring):
         
         poi = lease_area_ring.intersection(line)
-        poi = [poi.x, poi.y]
-
-        # snap to nearest point
-        interim_estimate_snapped = snap_to_grid(
-            grid_to_search, poi, lease_bathymetry)
-
-        # then shift
         
-        # find cp_loc in list of points
-        grid_point = lease_bathymetry[
-            (lease_bathymetry.x == interim_estimate_snapped[0]) & 
-            (lease_bathymetry.y == interim_estimate_snapped[1])]
-                
-        # get neighbours
-        check_x_direction = [0, 0, -1, +1, -1, +1, -1, +1]
-        check_y_direction = [-1, +1, 0, 0, -1, +1, -1, +1]
-        
-        neighbour_ids = [
-            (grid_point.i.item() - i_shift, grid_point.j.item() - j_shift)
-            for i_shift, j_shift
-            in zip(check_x_direction, check_y_direction)]
-        
-        for neighbour in neighbour_ids:
+        if isinstance(poi, MultiPoint):
             
-            neighbour = lease_bathymetry[
-                            (lease_bathymetry.i == neighbour[0]) &
-                            (lease_bathymetry.j == neighbour[1])]
-
-            neighbour_shapely = Point(neighbour.x, neighbour.y)
-
-            if neighbour_shapely.within(lease):
-
-                interim_estimate = (neighbour.x.item(), neighbour.y.item())
-
-                break
-
+            line_end = Point(line.coords[-1])
+            poi_candidates = list(poi)
+            
+            distances = [p.distance(line_end) for p in poi_candidates]
+            min_distance_idx = distances.index(min(distances))
+            
+            poi = poi_candidates[min_distance_idx]
+        
+        poi = [poi.x, poi.y]
+    
+    else:
+        
+        poi = nearest_points(line, lease_area_ring)[1].coords[0]
+    
+    # snap to nearest point
+    interim_estimate_snapped = snap_to_grid(
+                                    grid_to_search, poi, lease_bathymetry)
+    
+    # then shift
+    
+    # find cp_loc in list of points
+    grid_point = lease_bathymetry[
+                    (lease_bathymetry.x == interim_estimate_snapped[0]) &
+                    (lease_bathymetry.y == interim_estimate_snapped[1])]
+    
+    # get neighbours
+    check_x_direction = [ 0,  0, -1,  1, -1,  1, -1,  1]
+    check_y_direction = [-1,  1,  0,  0, -1,  1,  1, -1]
+    
+    neighbour_ids = [
+        (grid_point.i.item() - i_shift, grid_point.j.item() - j_shift)
+            for i_shift, j_shift in zip(check_x_direction, check_y_direction)]
+    
+    for neighbour in neighbour_ids:
+        
+        neighbour = lease_bathymetry[
+                        (lease_bathymetry.i == neighbour[0]) &
+                        (lease_bathymetry.j == neighbour[1])]
+        
+        neighbour_shapely = Point(neighbour.x, neighbour.y)
+        
+        if neighbour_shapely.within(lease):
+            interim_estimate = (neighbour.x.item(), neighbour.y.item())
+            break
+    
     return interim_estimate
 
 def substation_in_site(grid_df, cp_loc, lease):
@@ -344,7 +354,7 @@ def calculate_distance(array_layout, n_oec, substation_location):
 
     layoutlist.insert(0,(substation_location[0],substation_location[1],0.0))
 
-    distance_list = ([scipy.spatial.distance.euclidean(a,b)
+    distance_list = ([spatial.distance.euclidean(a,b)
                       for a, b
                       in itertools.product(np.asarray(layoutlist),repeat=2)])
 
@@ -400,6 +410,13 @@ def calculate_distance_dijkstra(layout_grid,
         b = layoutlist[j]
     
         ij_length, ij_path = dijkstra(graph, a, b, grid)
+        
+        if len(ij_path) < 2:
+            
+            err_str = ("The path between two devices contains less than two "
+                       "grid points. Consider increasing spacing between "
+                       "devices or grid resolution.")
+            raise RuntimeError(err_str)
         
         distance_array[i, j] = ij_length
         path_array[i, j] = ij_path
@@ -479,23 +496,10 @@ def get_device_locations(layout, site_grid):
 
 def calculate_saving_vector(distance_vector, n_oec):
     
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        saving_vector_filtered (list): Description.
-
-    '''
-    
     saving_vector = [(i, j, distance_vector[0][i] - distance_vector[j][i])
                         for i in range(0, n_oec + 1)
                             for j in range(0, n_oec + 1) if i != j]
-
+    
     saving_vector_sorted = sorted(saving_vector,
                                   key=lambda i: (float(i[2])), reverse=True)
     # tidy up savings vector by removing self connecting nodes
@@ -503,7 +507,7 @@ def calculate_saving_vector(distance_vector, n_oec):
     for point in saving_vector_sorted:
         if point[0] != point[1] and point[2] >= 0.0:
             saving_vector_filtered.append(point)
-
+    
     return saving_vector_filtered
 
 
@@ -527,33 +531,25 @@ def check_in_route(point_to_check, route):
     else:
         in_set = False
     return in_set
-    
+
+
 def check_in_path(point_to_check, path):
     
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
-    
     same_path = []
+    
     for i in range(0, len(path)):
         if point_to_check[0] in path[i] and point_to_check[1] in path[i]:
             same_path.append(True)
         else:
             same_path.append(False)
+    
     if not sum(same_path):
         same_path = False
     else:
         same_path = True
+    
     return same_path
+
 
 def check_neighbour_number(route, point_to_check):
     
@@ -591,36 +587,25 @@ def check_neighbour_number(route, point_to_check):
         t = True
     return t
 
-def check_path_capacity(path, point_to_check, cap):
-    
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
 
-    '''
+def check_path_capacity(path, point_to_check, cap):
     
     for i in path:
         if point_to_check[0] in i:
-            # get length
-            path_length_k = len(i)-1
+            path_length_k = len(i) - 1
         if point_to_check[1] in i:
-            # get length
-            path_length_u = len(i)-1
+            path_length_u = len(i) - 1
     
     # sum path lengths and check capacity
     total = path_length_k + path_length_u
+    
     if total > cap:
         cap_exceed = True
     else:
         cap_exceed = False
+    
     return cap_exceed
+
 
 def crossing_dijkstra(path, route, path_array, devices, site_grid):
     
@@ -635,10 +620,18 @@ def crossing_dijkstra(path, route, path_array, devices, site_grid):
     
     # initiate crossing vector
     cross = []
+    
     for edge in route:
         # make line
         line2 = path_array[edge[0]][edge[1]]
+        
+        # Route is infeasible
+        if len(line2) < 2:
+            cross.append(True)
+            continue
+        
         line2 = make_linestring(line2, site_grid)
+        
         if line1.intersection(line2).is_empty:
             cross.append(False)
         elif line1.intersection(line2) == Point(devices[path[0]-1][2][0],devices[path[0]-1][2][1]):
@@ -866,19 +859,6 @@ def y_intercept(point, gradient):
 
 def update_path(point, route):
 
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
-    
     route.append((point[0],point[1]))
     # Remove link to 0 point
     if (point[0],0) in route:
@@ -949,35 +929,25 @@ def run_this(saving_vector, path, route, n_oec, string_max, layout):
 
     return path
 
-def run_this_dijkstra(saving_vector, path, route, n_oec, string_max,
-                      path_array, devices, site_grid):
-    
-    '''Description.
-    
-    Args:
-        args (type): Description.
-    
-    Attributes:
-        attributes (type): Description.
-    
-    Returns:
-        returns (type): Description.
-
-    '''
+def run_this_dijkstra(saving_vector,
+                      path,
+                      route,
+                      string_max,
+                      path_array,
+                      devices,
+                      site_grid):
     
     for point in saving_vector:
-        if ((check_in_path(point, path) == 0) and
-            (check_in_route(point, route) == 1) and
-            (check_neighbour_number(route, point) == 1) and
-            (check_path_capacity(path, point, string_max) == 0) and
-            (crossing_dijkstra(point,
-                               route, 
-                               path_array,
-                               devices,
-                               site_grid) == 0)):
-
+        if (not check_in_path(point, path) and
+            check_in_route(point, route) and
+            check_neighbour_number(route, point) and
+            not check_path_capacity(path, point, string_max) and
+            not crossing_dijkstra(point,
+                                  route, 
+                                  path_array,
+                                  devices,
+                                  site_grid)):
+                
                 path = update_path(point, route)
-
+    
     return path
-
-

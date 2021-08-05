@@ -20,12 +20,15 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import networkx as nx
+from shapely.geometry import LinearRing, LineString, Point
 
+from dtocean_electrical.grid.grid_processing import clip_grid
 from dtocean_electrical.optim_codes.array_layout import (
                                                 dijkstra,
                                                 get_export,
                                                 calculate_distance_dijkstra,
-                                                calculate_saving_vector)
+                                                calculate_saving_vector,
+                                                set_substation_to_edge)
 
 
 def test_dijkstra(graph):
@@ -118,4 +121,19 @@ def test_calculate_saving_vector(grid):
             assert np.isclose(vector[2], 0)
         else:
             assert vector[2] > 0.
-        
+
+
+def test_set_substation_to_edge(lease, export):
+    
+    _, lease_polygon = clip_grid(lease, export)
+    
+    landing_point = Point((495000., 6502220))
+    line = LineString([(491810., 6502220), landing_point])
+    lease_area_ring = LinearRing(list(lease_polygon.exterior.coords))
+    
+    result = set_substation_to_edge(line,
+                                    lease_area_ring,
+                                    lease,
+                                    lease_polygon)
+    
+    assert ((lease['x'] == result[0]) & (lease['y'] == result[1])).any()

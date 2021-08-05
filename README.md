@@ -1,6 +1,6 @@
 [![appveyor](https://ci.appveyor.com/api/projects/status/github/DTOcean/dtocean-electrical?branch=master&svg=true)](https://ci.appveyor.com/project/DTOcean/dtocean-electrical)
 [![codecov](https://codecov.io/gh/DTOcean/dtocean-electrical/branch/master/graph/badge.svg)](https://codecov.io/gh/DTOcean/dtocean-electrical)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/64b45b67ff304732be79435c3fb20751)](https://www.codacy.com/project/H0R5E/dtocean-electrical/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DTOcean/dtocean-electrical&amp;utm_campaign=Badge_Grade_Dashboard&amp;branchId=11704041)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/4019b8db936047febb98c2955474b100)](https://www.codacy.com/gh/DTOcean/dtocean-electrical/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DTOcean/dtocean-electrical&amp;utm_campaign=Badge_Grade)
 [![release](https://img.shields.io/github/release/DTOcean/dtocean-electrical.svg)](https://github.com/DTOcean/dtocean-electrical/releases/latest)
 
 # DTOcean Electrical Sub-Systems Module
@@ -47,6 +47,13 @@ $ conda activate _dtocean_electro
 $ copy .condarc %CONDA_PREFIX%
 ```
 
+OR, if you're using Powershell:
+
+```
+$ conda activate _dtocean_electro
+$ copy .condarc $env:CONDA_PREFIX
+```
+
 Install [polite](https://github.com/DTOcean/polite) into the environment. For 
 example, if installing it from source:
 
@@ -85,13 +92,13 @@ $ conda activate _dtocean_electro
 Install packages required for testing to the environment (one time only):
 
 ```
-$ conda install -y pytest pytest-mock openpyxl xlrd xlwt
+$ conda install -y mock pytest pytest-cov=2.5.1 pytest-mock openpyxl xlrd xlwt
 ```
 
 Run the tests:
 
 ``` 
-$ py.test tests
+$ pytest tests
 ```
 
 ### Uninstall
@@ -133,8 +140,8 @@ Please make sure to update tests as appropriate.
 This package was initially created as part of the [EU DTOcean project](
 https://www.dtoceanplus.eu/About-DTOceanPlus/History) by:
 
- * Adam Collin at [the University of Edinburgh](https://www.ed.ac.uk/)
- * Mathew Topper at [TECNALIA](https://www.tecnalia.com)
+ *  Adam Collin at [the University of Edinburgh](https://www.ed.ac.uk/)
+ *  Mathew Topper at [TECNALIA](https://www.tecnalia.com)
 
 It is now maintained by Mathew Topper at [Data Only Greater](
 https://www.dataonlygreater.com/).

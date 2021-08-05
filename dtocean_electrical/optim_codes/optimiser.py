@@ -573,7 +573,7 @@ class Optimiser(object):
             lease = lease.buffer(-edge_buffer)
             
         lease_area_ring = LinearRing(list(lease.exterior.coords))
-
+        
         min_x = min(device_loc[:, 0])
         max_x = max(device_loc[:, 0])
         diff_x = max_x - min_x
@@ -601,9 +601,16 @@ class Optimiser(object):
         shift = 100  # this can be updated based on device spacing
         shift_increment = 0
         shift_flag = False
-
+        
         # check spread of devices
-        if diff_x/diff_y >= 1:
+        if len(device_loc) < 2:
+            
+            interim_estimate = (initial_estimate_on_grid[0] + shift, min_y)
+            
+            shift_flag = True
+            shift_increment += shift
+        
+        elif diff_x/diff_y >= 1:
 
             # these devices are considered stacked in the y dimension
             mid_point_x = min_x + diff_x/2
@@ -648,15 +655,20 @@ class Optimiser(object):
         interim_estimate_shapely = Point(interim_estimate[:2])
 
         if not interim_estimate_shapely.within(lease):
-
+            
             interim_estimate = connect.set_substation_to_edge(
                                         export_line,
                                         lease_area_ring,
                                         self.meta_data.site_data.bathymetry,
                                         lease)
-
+            
+            if interim_estimate is None:
+                
+                err_msg = "Failed to find suitable substation location"
+                raise RuntimeError(err_msg)
+            
             close = False
-
+        
         else:
 
             close = connect.closeness_test(
@@ -1530,7 +1542,7 @@ class RadialNetwork(Optimiser):
                                            combo_devices)):
             
             module_logger.info("Evaluating network combination {} of "
-                               "{}".format(i, n_combos))
+                               "{}".format(i + 1, n_combos))
             
             # Copy the distance and path matrices
             sim_distance_matrix = deepcopy(distance_matrix)
@@ -1617,40 +1629,44 @@ class RadialNetwork(Optimiser):
         v_export = []
         v_array = []
         n_devices = []
+        max_devices_per_line = None
         
-        if self.meta_data.options.devices_per_string:
-
+        if self.meta_data.options.devices_per_string is not None:
+            
             if (self.meta_data.options.devices_per_string >
                     self.meta_data.array_data.n_devices):
-
+                
                 msg = ("Max number of devices per string {} is greater than "
                         "array size {}. Capped at array size.").format(
                                 self.meta_data.options.devices_per_string,
                                 self.meta_data.array_data.n_devices)
-
                 module_logger.warning(msg)
-
+                
                 max_devices_per_line = self.meta_data.array_data.n_devices
-
+            
             else:
                 
                 max_devices_per_line = \
                     self.meta_data.options.devices_per_string
-
-        else:
-            
-            max_devices_per_line = self.meta_data.array_data.n_devices
-
+        
         for combo in self.voltage_combinations:
-
-            for device_per_line in range(max_devices_per_line):
-
+            
+            if max_devices_per_line is not None:
+                
+                v_export.append(combo[0])
+                v_array.append(combo[1])
+                n_devices.append(max_devices_per_line)
+                
+                continue
+            
+            for device_per_line in range(self.meta_data.array_data.n_devices):
+                
                 v_export.append(combo[0])
                 v_array.append(combo[1])
                 n_devices.append(device_per_line)
-
+        
         return v_export, v_array, n_devices
-
+    
     def brute_force_method(self, n_cp,
                                  max_,
                                  cp_loc,
@@ -1706,7 +1722,6 @@ class RadialNetwork(Optimiser):
                                         savings_vector,
                                         path_vector,
                                         route_vector,
-                                        n_devices,
                                         max_,
                                         path_matrix,
                                         devices,
@@ -2235,7 +2250,6 @@ class StarNetwork(Optimiser):
         connect_matrix = connect.run_this_dijkstra(savings_vector,
                                                    path_vector,
                                                    route_vector,
-                                                   n_cp,
                                                    max_,
                                                    path_matrix,
                                                    cps,
