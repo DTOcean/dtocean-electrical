@@ -625,6 +625,7 @@ def crossing_dijkstra(path, route, path_array, devices, site_grid):
         # make line
         line2 = path_array[edge[0]][edge[1]]
         
+        # Route is infeasible
         if len(line2) < 2:
             cross.append(True)
             continue

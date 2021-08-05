@@ -47,6 +47,13 @@ $ conda activate _dtocean_electro
 $ copy .condarc %CONDA_PREFIX%
 ```
 
+OR, if you're using Powershell:
+
+```
+$ conda activate _dtocean_electro
+$ copy .condarc $env:CONDA_PREFIX
+```
+
 Install [polite](https://github.com/DTOcean/polite) into the environment. For 
 example, if installing it from source:
 
@@ -85,7 +92,7 @@ $ conda activate _dtocean_electro
 Install packages required for testing to the environment (one time only):
 
 ```
-$ conda install -y pytest pytest-mock openpyxl xlrd xlwt
+$ conda install -y mock pytest pytest-cov=2.5.1 pytest-mock openpyxl xlrd xlwt
 ```
 
 Run the tests:
