@@ -2,10 +2,9 @@
 
 import os
 import sys
+from distutils.cmd import Command
 
 import yaml
-
-from distutils.cmd import Command
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
 
@@ -27,7 +26,8 @@ class PyTest(TestCommand):
         import pytest
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)
-        
+
+
 class CleanPyc(Command):
 
     description = 'clean *.pyc'

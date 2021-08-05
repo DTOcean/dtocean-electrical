@@ -932,7 +932,6 @@ def run_this(saving_vector, path, route, n_oec, string_max, layout):
 def run_this_dijkstra(saving_vector,
                       path,
                       route,
-                      n_oec,
                       string_max,
                       path_array,
                       devices,
