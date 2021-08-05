@@ -15,7 +15,7 @@ See [dtocean-app](https://github.com/DTOcean/dtocean-app) or [dtocean-core](
 https://github.com/DTOcean/dtocean-app) to use this package within the DTOcean
 ecosystem.
 
-* For python 2.7 only.
+\* For python 2.7 only.
 
 ## Installation
 
@@ -140,8 +140,8 @@ Please make sure to update tests as appropriate.
 This package was initially created as part of the [EU DTOcean project](
 https://www.dtoceanplus.eu/About-DTOceanPlus/History) by:
 
- *  Adam Collin at [the University of Edinburgh](https://www.ed.ac.uk/)
- *  Mathew Topper at [TECNALIA](https://www.tecnalia.com)
+*   Adam Collin at [the University of Edinburgh](https://www.ed.ac.uk/)
+*   Mathew Topper at [TECNALIA](https://www.tecnalia.com)
 
 It is now maintained by Mathew Topper at [Data Only Greater](
 https://www.dataonlygreater.com/).
