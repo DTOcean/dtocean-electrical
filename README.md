@@ -92,7 +92,7 @@ $ conda activate _dtocean_electro
 Install packages required for testing to the environment (one time only):
 
 ```
-$ conda install -y mock pytest pytest-cov=2.5.1 pytest-mock openpyxl xlrd xlwt
+$ conda install -y mock pytest pytest-cov=2.5.1 pytest-mock
 ```
 
 Run the tests:
@@ -121,6 +121,7 @@ Example scripts are available in the "examples" folder of the source code.
 
 ```
 $ cd examples
+$ conda install -y xlrd<2
 $ python electrical_run.py
 ```
 
