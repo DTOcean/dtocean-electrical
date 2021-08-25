@@ -1,5 +1,5 @@
 # REQUIREMENTS FOR CONDA INSTALLATION (EXCLUDING DTOCEAN PACKAGES)
-descartes
+descartes-matplotlib
 matplotlib <2
 networkx >=2.0
 numpy
