@@ -3,6 +3,9 @@ pinned_packages:
   - conda=4.6.14
   - pyqt=4.11.4=py27_5
 
+disallow:
+  - matplotlib-base
+
 channels:
   - defaults
   - free
