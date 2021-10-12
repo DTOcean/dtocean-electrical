@@ -1,6 +1,7 @@
 pinned_packages:
   - python=2
   - conda=4.6.14
+  - decorator<5
   - pyqt=4.11.4=py27_5
 
 disallow:
