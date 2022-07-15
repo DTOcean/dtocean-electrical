@@ -27,7 +27,7 @@ Distribution](https://www.anaconda.com/distribution/) (Python 2.7)
 To install:
 
 ```
-$ conda install -c dataonlygreater dtocean-electrical
+$ conda install -c defaults -c free -c dataonlygreater dtocean-electrical
 ```
 
 ### Source Code
